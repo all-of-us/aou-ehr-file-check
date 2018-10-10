@@ -1,7 +1,7 @@
 import glob
 import traceback
 
-import _settings
+import settings
 import os
 import codecs
 import pandas as pd
@@ -23,7 +23,7 @@ ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
 
 def get_cdm_table_columns(table_name):
     # allow files to be found regardless of CaSe
-    file=os.path.join(_settings.cdm_metadata_path, table_name.lower() + '.json')
+    file=os.path.join(settings.cdm_metadata_path, table_name.lower() + '.json')
     if os.path.isfile(file):
         with open(file, 'r') as f:
             return json.load(f, object_pairs_hook=collections.OrderedDict)
@@ -285,4 +285,4 @@ def evaluate_submission(d):
 
 
 if __name__ == '__main__':
-    evaluate_submission(_settings.csv_dir)
+    evaluate_submission(settings.csv_dir)

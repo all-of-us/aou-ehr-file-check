@@ -1,4 +1,4 @@
-import _settings
+import settings
 import unittest
 import omop_file_validator
 import os
@@ -25,10 +25,10 @@ class TestReporter(unittest.TestCase):
                 self.assert_line_equality(line_list1[i], line_list2[i])
 
     def test_against_file(self):
-        submission_folder = _settings.example_path
+        submission_folder = settings.example_path
         omop_file_validator.evaluate_submission(submission_folder)
 
-        output_folder = os.path.join(_settings.example_path, 'errors')
+        output_folder = os.path.join(settings.example_path, 'errors')
         results_file = os.path.join(output_folder, 'results.csv')
 
         expected_results_file = os.path.join(submission_folder, 'expected_errors', 'results.csv')
