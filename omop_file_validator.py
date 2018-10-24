@@ -16,9 +16,16 @@ MSG_INVALID_TYPE = 'Type mismatch'
 MSG_INCORRECT_HEADER = 'Column not in table definition'
 MSG_MISSING_HEADER = 'Column missing in file'
 MSG_INCORRECT_ORDER = 'Column not in expected order'
+MSG_NULL_DISALLOWED = 'NULL values are not allowed for column'
 
-HEADER_KEYS = ['filename', 'table_name']
+HEADER_KEYS = ['file_name', 'table_name']
 ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
+
+
+def get_readable_key(key):
+    new_key = key.replace('_', ' ')
+    new_key = new_key.title()
+    return new_key
 
 
 def get_cdm_table_columns(table_name):
@@ -121,6 +128,7 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type, df)
             # print(row[column_name])
             return index
 
+
 def process_file(file_path):
     """
     This function processes the submitted file
@@ -128,8 +136,8 @@ def process_file(file_path):
     then only the error report headers will in the results.
     """
 
-    filename, file_extension = os.path.splitext(file_path)
-    file_path_parts = filename.split(os.sep)
+    file_name, file_extension = os.path.splitext(file_path)
+    file_path_parts = file_name.split(os.sep)
     table_name = file_path_parts[-1]
 
     #get the column definitions for a particular OMOP table
@@ -140,7 +148,9 @@ def process_file(file_path):
     print(phase)
 
     result = {'passed': False, 'errors': []}
-    result['filename'] = table_name+file_extension
+    result['file_name'] = table_name+file_extension
+    print(table_name)
+    result['table_name'] = get_readable_key(table_name)
 
     if cdm_table_columns is None:
         result['errors'].append(dict(message='File is not a OMOP CDM table: %s' % table_name))
@@ -197,7 +207,7 @@ def process_file(file_path):
 
                                 # Check if any nulls present in a required field
                                 if meta_column_required and df[submission_column].isnull().sum()>0:#submission_column['stats']['nulls']:
-                                    result['errors'].append(dict(message='NULL values are not allowed for column',
+                                    result['errors'].append(dict(message=MSG_NULL_DISALLOWED,
                                                                  column_name=submission_column))
                                 continue
 
@@ -210,7 +220,6 @@ def process_file(file_path):
             print(traceback.format_exc())
             #Adding error message if there is a wrong number of columns in a row
             result['errors'].append(dict(message=e.args[0].rstrip()))
-
 
     return result
 
@@ -246,6 +255,7 @@ def _check_columns(cdm_column_names, csv_columns, result):
     for idx, col in enumerate(cdm_column_names):
         if idx < len(csv_columns) and csv_columns[idx] != col:
             e = dict(message=MSG_INCORRECT_ORDER,
+                     column_name=csv_columns[idx],
                      actual=csv_columns[idx],
                      expected=col)
             result['errors'].append(e)
@@ -254,34 +264,65 @@ def _check_columns(cdm_column_names, csv_columns, result):
 
     return columns_valid
 
+
+def generate_pretty_html(html_output_file_name):
+    lines = []
+    with open(settings.html_boilerplate, 'r') as f:
+        lines.extend(f.readlines())
+    lines.append('<table id="dataframe" style="width:80%" class="center">\n')
+    with open(html_output_file_name, 'r') as f:
+        lines.extend(f.readlines()[1:])
+    lines.extend(['\n', '</body>\n', '</html>\n'])
+    with open(html_output_file_name, 'w') as f:
+        for line in lines:
+            f.write(line)
+
+
 def evaluate_submission(d):
     out_dir = os.path.join(d, 'errors')
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-    output_filename = os.path.join(out_dir, 'results.csv')
-    with open(output_filename, 'w') as out:
-        # Create header information for results file
-        field_names = HEADER_KEYS + ERROR_KEYS
-        writer = csv.DictWriter(out, fieldnames=field_names, lineterminator='\n', quoting=csv.QUOTE_ALL)
-        writer.writeheader()
+    output_file_name = os.path.join(out_dir, 'results.csv')
+    error_map = {}
 
-        for f in glob.glob(os.path.join(d, '*.csv')):
-            file_path_parts = f.split(os.sep)
-            filename = file_path_parts[-1]
+    readable_field_names = [get_readable_key(field_name) for field_name in HEADER_KEYS + ERROR_KEYS]
+    df = pd.DataFrame(columns=readable_field_names)
+    table_names = collections.defaultdict()
 
-            result = process_file(f)
-            rows = []
-            for error in result['errors']:
-                row = dict()
-                for header_key in HEADER_KEYS:
-                    row[header_key] = result.get(header_key)
-                for error_key in ERROR_KEYS:
-                    row[error_key] = error.get(error_key)
-                rows.append(row)
+    for key in HEADER_KEYS + ERROR_KEYS:
+        new_key = get_readable_key(key)
+        table_names[key] = new_key
 
-            if len(rows) > 0:
-                writer.writerows(rows)
+    for f in glob.glob(os.path.join(d, '*.csv')):
+        file_path_parts = f.split(os.sep)
+        file_name = file_path_parts[-1]
+
+        result = process_file(f)
+        rows = []
+        for error in result['errors']:
+            row = []
+            for header_key in HEADER_KEYS:
+                row.append(result.get(header_key))
+            for error_key in ERROR_KEYS:
+                row.append(error.get(error_key))
+            rows.append(row)
+
+        if len(rows) > 0:
+            df_file = pd.DataFrame(rows, columns=readable_field_names)
+            df = df.append(df_file, ignore_index=True)
+
+        error_map[file_name] = result['errors']
+    df.to_csv(output_file_name, index=False, quoting=csv.QUOTE_ALL)
+
+    # changing extension
+    html_output_file_name = output_file_name[:-4]+'.html'
+
+    df = df.fillna('')
+    df.to_html(html_output_file_name, index=False)
+    generate_pretty_html(html_output_file_name)
+
+    return error_map
 
 
 if __name__ == '__main__':

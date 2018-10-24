@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#dataframe {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.center {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 12px;
+}
+
+#dataframe td, #dataframe th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#dataframe tr:nth-child(even){background-color: #f2f2f2;}
+
+#dataframe tr:hover {background-color: #ddd;}
+
+#dataframe th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: #85C1E9;
+    color: white;
+}
+
+img {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+h1 {
+    font-family: Lato, sans-serif;
+    display: block;
+    font-size: 20px;
+    margin-top: 24px;
+    margin-bottom: 0;
+    margin-left: 192px;
+    margin-right: 0;
+    font-weight: 300;
+}
+
+</style>
+  <title>Results</title>
+</head>
+
+<body>
+<img src="../../../../resources/all-of-us-logo.jpg" alt="Icon" height="64">
+<h1>Local File Validation Error Results</h1>

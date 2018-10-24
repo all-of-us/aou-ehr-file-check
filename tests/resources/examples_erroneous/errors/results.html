@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#dataframe {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.center {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 12px;
+}
+
+#dataframe td, #dataframe th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#dataframe tr:nth-child(even){background-color: #f2f2f2;}
+
+#dataframe tr:hover {background-color: #ddd;}
+
+#dataframe th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: #85C1E9;
+    color: white;
+}
+
+img {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+h1 {
+    font-family: Lato, sans-serif;
+    display: block;
+    font-size: 20px;
+    margin-top: 24px;
+    margin-bottom: 0;
+    margin-left: 192px;
+    margin-right: 0;
+    font-weight: 300;
+}
+
+</style>
+  <title>Results</title>
+</head>
+
+<body>
+<img src="../../../../resources/all-of-us-logo.jpg" alt="Icon" height="64">
+<h1>Local File Validation Error Results</h1><table id="dataframe" style="width:80%" class="center">
+  <thead>
+    <tr style="text-align: right;">
+      <th>File Name</th>
+      <th>Table Name</th>
+      <th>Message</th>
+      <th>Column Name</th>
+      <th>Actual</th>
+      <th>Expected</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>condition.csv</td>
+      <td>Condition</td>
+      <td>File is not a OMOP CDM table: condition</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Column not in table definition</td>
+      <td>drug_id</td>
+      <td>drug_id</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Column missing in file</td>
+      <td>person_id</td>
+      <td></td>
+      <td>person_id</td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Column not in expected order</td>
+      <td>drug_concept_id</td>
+      <td>drug_concept_id</td>
+      <td>person_id</td>
+    </tr>
+    <tr>
+      <td>measurement.csv</td>
+      <td>Measurement</td>
+      <td>NULL values are not allowed for column</td>
+      <td>person_id</td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>observation.csv</td>
+      <td>Observation</td>
+      <td>Type mismatch line number 3</td>
+      <td>observation_type_concept_id</td>
+      <td>unknown</td>
+      <td>integer</td>
+    </tr>
+    <tr>
+      <td>person.csv</td>
+      <td>Person</td>
+      <td>Column not in expected order</td>
+      <td>birth_datetime</td>
+      <td>birth_datetime</td>
+      <td>day_of_birth</td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>
