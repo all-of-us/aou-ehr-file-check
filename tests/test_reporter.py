@@ -4,6 +4,7 @@ import omop_file_validator
 
 
 class TestReporter(unittest.TestCase):
+    # Checks if individual fields are as expected
     def check_error(self, e, message, actual, column_name=None, expected=None):
         self.assertEqual(e['message'], message)
         self.assertEqual(e['actual'], actual)
@@ -12,24 +13,30 @@ class TestReporter(unittest.TestCase):
         if column_name is not None:
             self.assertEqual(e['column_name'], column_name)
 
+    # "condition.csv" is an erroneous filename since it is not in line with the specifications under
+    # [resources/omop](https://github.com/all-of-us/aou-ehr-file-check/tree/master/resources/omop)
     def check_invalid_table_name(self, f_name, e):
         self.assertEquals(f_name, 'condition.csv')
         self.check_error(e,
                          message=omop_file_validator.MSG_CANNOT_PARSE_FILENAME,
                          actual=f_name)
 
+    # "drug_exposure.csv" has the column "person_id" missing
     def check_missing_column(self, f_name, e):
         self.assertEquals(f_name, 'drug_exposure.csv')
         self.check_error(e,
                          message=omop_file_validator.MSG_MISSING_HEADER,
                          actual="person_id")
 
+    # "drug_exposure.csv" has the column "drug_id" added but it is not in the specifications under
+    # [resources/omop/dose_era.json](https://github.com/all-of-us/aou-ehr-file-check/tree/master/resources/omop/dose_era.json)
     def check_incorrect_column(self, f_name, e):
         self.assertEquals(f_name, 'drug_exposure.csv')
         self.check_error(e,
                          message=omop_file_validator.MSG_INCORRECT_HEADER,
                          actual="drug_id")
 
+    # "person.csv" has the columns "birth_datetime" and "day_of_birth" interchanged
     def check_incorrect_order(self, f_name, e):
         self.assertEquals(f_name, 'person.csv')
         self.check_error(e,
@@ -37,6 +44,8 @@ class TestReporter(unittest.TestCase):
                          actual="birth_datetime",
                          expected="day_of_birth")
 
+    # "observation.csv" has an incorrect data type in the column "observation_type_concept_id" and
+    # row 2 (line number 3), with "string" ("unknown") instead of "integer"
     def check_invalid_type(self, f_name, e):
         self.assertEquals(f_name, 'observation.csv')
         error_row_index = 2
@@ -46,6 +55,7 @@ class TestReporter(unittest.TestCase):
                          column_name="observation_type_concept_id",
                          expected="integer")
 
+    # "measurement.csv" has "person_id" as NULL in row 3 (line number 4) but it is a required value
     def check_required_value(self, f_name, e):
         self.assertEquals(f_name, 'measurement.csv')
         self.check_error(e,
@@ -53,6 +63,7 @@ class TestReporter(unittest.TestCase):
                          actual="",
                          column_name="person_id")
 
+    # function to run the above tests
     def test_error_list(self):
         submission_folder = settings.example_path
         error_map = omop_file_validator.evaluate_submission(submission_folder)
