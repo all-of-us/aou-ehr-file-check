@@ -89,6 +89,6 @@ class TestReporter(unittest.TestCase):
         if self.assertIn("measurement.csv", error_map):
             self.check_required_value(f_name, error_map[f_name][0])
 
-
+            
 if __name__ == '__main__':
     unittest.main()
