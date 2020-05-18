@@ -69,7 +69,55 @@ h1 {
     <tr>
       <td>condition.csv</td>
       <td>Condition</td>
-      <td>File is not a OMOP CDM table: condition</td>
+      <td>File is not an OMOP CDM table: condition</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Please fix incorrect headers at the top of the file, enclosed in double quotes</td>
+      <td></td>
+      <td>[drug_exposure_id, drug_concept_id, drug_id, drug_exposure_start_date, drug_exposure_start_datetime, drug_exposure_end_date, drug_exposure_end_datetime, verbatim_end_date, drug_type_concept_id, stop_reason, refills, quantity, days_supply, sig, route_concept_id, lot_number, provider_id, visit_occurrence_id, drug_source_value, drug_source_concept_id, route_source_value, dose_unit_source_value]</td>
+      <td>[drug_exposure_id, person_id, drug_concept_id, drug_exposure_start_date, drug_exposure_start_datetime, drug_exposure_end_date, drug_exposure_end_datetime, verbatim_end_date, drug_type_concept_id, stop_reason, refills, quantity, days_supply, sig, route_concept_id, lot_number, provider_id, visit_occurrence_id, drug_source_value, drug_source_concept_id, route_source_value, dose_unit_source_value]</td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Encountered error on line 1: [321573.0, 6.0, 1506270.0, 2718581.0, '2009-12-10', '2009-12-10 00:00:00.000000 UTC', '', '', '', 38000175.0, '', '', '', '', '', '', '', 54051.0, 295255.0, 'J2930', 2718581.0, '', '']</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Encountered error on line 2: [321572.0, 6.0, 46287340.0, 2718292.0, '2009-12-10', '2009-12-10 00:00:00.000000 UTC', '', '', '', 38000175.0, '', '', '', '', '', '', '', 54051.0, 295255.0, 'J0690', 2718292.0, '', '']</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Encountered error on line 3: [321571.0, 6.0, 708298.0, 2718495.0, '2009-12-10', '2009-12-10 00:00:00.000000 UTC', '', '', '', 38000175.0, '', '', '', '', '', '', '', 54051.0, 295255.0, 'J2250', 2718495.0, '', '']</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Encountered error on line 4: [586792.0, 7.0, 40164897.0, 45151573.0, '2010-12-15', '2010-12-15 00:00:00.000000 UTC', '', '', '', 38000175.0, '', '', '200.0', 30.0, '', '', '', '', '', 24724001650.0, 45151573.0, '', '']</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>drug_exposure.csv</td>
+      <td>Drug Exposure</td>
+      <td>Encountered error on line 5: [586736.0, 7.0, 19018875.0, 45293299.0, '2010-02-04', '2010-02-04 00:00:00.000000 UTC', '', '', '', 38000175.0, '', '', '60.0', 30.0, '', '', '', '', '', 55045213505.0, 45293299.0, '', '']</td>
       <td></td>
       <td></td>
       <td></td>
@@ -101,18 +149,26 @@ h1 {
     <tr>
       <td>measurement.csv</td>
       <td>Measurement</td>
+      <td>Type mismatch line number 3</td>
+      <td>person_id</td>
+      <td></td>
+      <td>integer</td>
+    </tr>
+    <tr>
+      <td>measurement.csv</td>
+      <td>Measurement</td>
       <td>NULL values are not allowed for column</td>
       <td>person_id</td>
       <td></td>
       <td></td>
     </tr>
     <tr>
-      <td>observation.csv</td>
-      <td>Observation</td>
-      <td>Type mismatch line number 3</td>
-      <td>observation_type_concept_id</td>
-      <td>unknown</td>
-      <td>integer</td>
+      <td>person.csv</td>
+      <td>Person</td>
+      <td>Please fix incorrect headers at the top of the file, enclosed in double quotes</td>
+      <td></td>
+      <td>[person_id, gender_concept_id, year_of_birth, month_of_birth, birth_datetime, day_of_birth, race_concept_id, ethnicity_concept_id, location_id, provider_id, care_site_id, person_source_value, gender_source_value, gender_source_concept_id, race_source_value, race_source_concept_id, ethnicity_source_value, ethnicity_source_concept_id]</td>
+      <td>[person_id, gender_concept_id, year_of_birth, month_of_birth, day_of_birth, birth_datetime, race_concept_id, ethnicity_concept_id, location_id, provider_id, care_site_id, person_source_value, gender_source_value, gender_source_concept_id, race_source_value, race_source_concept_id, ethnicity_source_value, ethnicity_source_concept_id]</td>
     </tr>
     <tr>
       <td>person.csv</td>
@@ -121,6 +177,14 @@ h1 {
       <td>birth_datetime</td>
       <td>birth_datetime</td>
       <td>day_of_birth</td>
+    </tr>
+    <tr>
+      <td>observation.csv</td>
+      <td>Observation</td>
+      <td>Type mismatch line number 3</td>
+      <td>observation_type_concept_id</td>
+      <td>unknown</td>
+      <td>integer</td>
     </tr>
   </tbody>
 </table>

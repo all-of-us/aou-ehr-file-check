@@ -1,6 +1,6 @@
-condition_occurrence_id,person_id,condition_concept_id,condition_start_date,condition_start_datetime,condition_end_date,condition_end_datetime,condition_type_concept_id,stop_reason,provider_id,visit_occurrence_id,condition_source_value,condition_source_concept_id,condition_status_source_value,condition_status_concept_id
-308,7,375806,2008-09-21,2008-09-21 05:00:00.000000 UTC,2008-09-30,2008-09-30 05:00:00.000000 UTC,38000230,,,116,3569,44826563,,
-757,8,317302,2008-10-10,2008-10-10 05:00:00.000000 UTC,2008-10-10,2008-10-10 05:00:00.000000 UTC,38000230,,,255,42781,44835942,,
-824,8,444367,2009-11-20,2009-11-20 05:00:00.000000 UTC,2009-11-20,2009-11-20 05:00:00.000000 UTC,38000230,,256,287,57420,44820959,,
-826,8,4168222,2009-11-20,2009-11-20 05:00:00.000000 UTC,2009-11-20,2009-11-20 05:00:00.000000 UTC,38000230,,256,287,78939,44823456,,
-823,8,4319325,2009-11-20,2009-11-20 05:00:00.000000 UTC,2009-11-20,2009-11-20 05:00:00.000000 UTC,38000230,,256,287,V4579,44833101,,
+"condition_occurrence_id","person_id","condition_concept_id","condition_start_date","condition_start_datetime","condition_end_date","condition_end_datetime","condition_type_concept_id","stop_reason","provider_id","visit_occurrence_id","condition_source_value","condition_source_concept_id","condition_status_source_value","condition_status_concept_id"
+308,7,375806,"2008-09-21","2008-09-21 05:00:00.000000 UTC","2008-09-30","2008-09-30 05:00:00.000000 UTC",38000230,"","",116,3569,44826563,"",""
+757,8,317302,"2008-10-10","2008-10-10 05:00:00.000000 UTC","2008-10-10","2008-10-10 05:00:00.000000 UTC",38000230,"","",255,42781,44835942,"",""
+824,8,444367,"2009-11-20","2009-11-20 05:00:00.000000 UTC","2009-11-20","2009-11-20 05:00:00.000000 UTC",38000230,"",256,287,57420,44820959,"",""
+826,8,4168222,"2009-11-20","2009-11-20 05:00:00.000000 UTC","2009-11-20","2009-11-20 05:00:00.000000 UTC",38000230,"",256,287,78939,44823456,"",""
+823,8,4319325,"2009-11-20","2009-11-20 05:00:00.000000 UTC","2009-11-20","2009-11-20 05:00:00.000000 UTC",38000230,"",256,287,"V4579",44833101,"",""

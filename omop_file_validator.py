@@ -21,6 +21,13 @@ MSG_NULL_DISALLOWED = 'NULL values are not allowed for column'
 HEADER_KEYS = ['file_name', 'table_name']
 ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
 
+csv.register_dialect('load',
+                     quotechar='"',
+                     doublequote=False,
+                     delimiter=',',
+                     quoting=csv.QUOTE_NONNUMERIC,
+                     strict=True)
+
 
 def get_readable_key(key):
     new_key = key.replace('_', ' ')
@@ -129,11 +136,25 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type, df)
             return index
 
 
-def check_csv_format(file_path):
+def check_csv_format(file_path, column_names):
+    results = []
     with open(file_path, 'r') as f:
-        reader = csv.reader(f, quotechar='"', doublequote=False, delimiter=',',
-                            quoting=csv.QUOTE_NONNUMERIC, strict=True)
-    return reader
+        try:
+            reader = csv.reader(f, dialect='load')
+            header = next(reader)
+            if header != column_names:
+                results.append(['Please fix incorrect headers at the top of the file, enclosed in double quotes',
+                                header, column_names])
+            else:
+                print('Header successfully parsed')
+            for idx, line in enumerate(reader):
+                if len(line) != len(column_names):
+                    results.append(['Encountered error on line %s: %s' % (str(idx+1), line), None, None])
+        except ValueError:
+            print(traceback.format_exc())
+            print('Please enclose all non-numeric fields in double-quotes '
+                  'e.g. "person_id","2020-05-05",6345 instead of person_id,2020-05-05,6345')
+    return results
 
 
 def process_file(file_path):
@@ -150,19 +171,18 @@ def process_file(file_path):
     # get the column definitions for a particular OMOP table
     cdm_table_columns = get_cdm_table_columns(table_name)
 
-    phase = 'Received CSV file "%s"' % table_name
-    print(phase)
+    print('Received CSV file "%s"' % file_name)
 
-    result = {'passed': False, 'errors': [], 'file_name': table_name + file_extension}
-    print(table_name)
-    result['table_name'] = get_readable_key(table_name)
+    result = {'passed': False, 'errors': [],
+              'file_name': table_name + file_extension,
+              'table_name': get_readable_key(table_name)}
 
     if cdm_table_columns is None:
-        result['errors'].append(dict(message='File is not a OMOP CDM table: %s' % table_name))
+        result['errors'].append(dict(message='File is not an OMOP CDM table: %s' % table_name))
         return result
 
     try:
-        phase = 'Parsing CSV file %s' % file_path
+        print('Parsing CSV file %s' % file_path)
 
         # get column names for this table
         cdm_column_names = [col['name'] for col in cdm_table_columns]
@@ -171,13 +191,15 @@ def process_file(file_path):
             print('File does not exist: %s' % file_path)
             return result
 
-        if not check_csv_format(file_path):
-            print('Wrongly formatted csv file: %s' % file_path)
-            return result
-
         with open(file_path, 'rb') as f:
             csv_columns = list(pd.read_csv(remove_bom(f), nrows=1).columns.values)
             datetime_columns = [col_name.lower() for col_name in csv_columns if 'date' in col_name.lower()]
+
+            format_errors = check_csv_format(file_path, cdm_column_names)
+            for format_error in format_errors:
+                result['errors'].append(dict(message=format_error[0],
+                                             actual=format_error[1],
+                                             expected=format_error[2]))
 
             # check columns if looks good process file
             if not _check_columns(cdm_column_names, csv_columns, result):
@@ -186,7 +208,6 @@ def process_file(file_path):
             # read file to be processed
             df = pd.read_csv(remove_bom(f), sep=',', na_values=['', ' ', '.'], parse_dates=datetime_columns,
                              infer_datetime_format=True)
-            print(phase)
 
             # lowercase field names
             df = df.rename(columns=str.lower)
