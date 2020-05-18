@@ -147,13 +147,16 @@ def check_csv_format(file_path, column_names):
                                 header, column_names])
             else:
                 print('Header successfully parsed')
-            for idx, line in enumerate(reader):
+            for idx, line in enumerate(reader, start=1):
                 if len(line) != len(column_names):
-                    results.append(['Encountered error on line %s: %s' % (str(idx+1), line), None, None])
+                    results.append(['Incorrect number of columns on line %s: %s' % (str(idx), line), None, None])
         except ValueError:
             print(traceback.format_exc())
+            print('Wrongly quoted fields on line %s\n' % (str(idx+1)))
             print('Please enclose all non-numeric fields in double-quotes '
                   'e.g. "person_id","2020-05-05",6345 instead of person_id,2020-05-05,6345')
+            if idx > 1:
+                print('Previously parsed line %s: %s\n' % (str(idx), line))
     return results
 
 
@@ -171,7 +174,7 @@ def process_file(file_path):
     # get the column definitions for a particular OMOP table
     cdm_table_columns = get_cdm_table_columns(table_name)
 
-    print('Received CSV file "%s"' % file_name)
+    print('Found CSV file for "%s"' % table_name)
 
     result = {'passed': False, 'errors': [],
               'file_name': table_name + file_extension,
