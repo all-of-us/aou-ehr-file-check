@@ -152,7 +152,8 @@ def check_csv_format(file_path, column_names):
                     results.append(['Incorrect number of columns on line %s: %s' % (str(idx), line), None, None])
         except ValueError:
             print(traceback.format_exc())
-            print('Wrongly quoted fields on line %s\n' % (str(idx+1)))
+            print('Wrongly quoted fields on line %s' % (str(idx+1)))
+            print('Numbering here starts from 0, which is for the header. Please add the header if absent\n')
             print('Please enclose all non-numeric fields in double-quotes '
                   'e.g. "person_id","2020-05-05",6345 instead of person_id,2020-05-05,6345')
             if idx > 1:
