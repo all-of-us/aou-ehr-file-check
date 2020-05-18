@@ -30,7 +30,7 @@ def get_readable_key(key):
 
 def get_cdm_table_columns(table_name):
     # allow files to be found regardless of CaSe
-    file=os.path.join(settings.cdm_metadata_path, table_name.lower() + '.json')
+    file = os.path.join(settings.cdm_metadata_path, table_name.lower() + '.json')
     if os.path.isfile(file):
         with open(file, 'r') as f:
             return json.load(f, object_pairs_hook=collections.OrderedDict)
@@ -85,7 +85,6 @@ def cast_type(cdm_column_type, value):
 
 # code from: http://stackoverflow.com/questions/2456380/utf-8-html-and-css-files-with-bom-and-how-to-remove-the-bom-with-python
 def get_bom_length(f):
-
     # read first 4 bytes
     header = f.read(4)
 
@@ -111,11 +110,10 @@ def remove_bom(f):
     return f
 
 
-#finds the first occurrence of an error for that column.
-#currently, it does NOT find all errors in the column.
+# finds the first occurrence of an error for that column.
+# currently, it does NOT find all errors in the column.
 def find_error_in_file(column_name, cdm_column_type, submission_column_type, df):
-
-    #for index, row in df.iterrows():
+    # for index, row in df.iterrows():
     for i, (index, row) in enumerate(df.iterrows()):
 
         try:
@@ -131,6 +129,13 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type, df)
             return index
 
 
+def check_csv_format(file_path):
+    with open(file_path, 'r') as f:
+        reader = csv.reader(f, quotechar='"', doublequote=False, delimiter=',',
+                            quoting=csv.QUOTE_NONNUMERIC, strict=True)
+    return reader
+
+
 def process_file(file_path):
     """
     This function processes the submitted file
@@ -142,85 +147,93 @@ def process_file(file_path):
     file_path_parts = file_name.split(os.sep)
     table_name = file_path_parts[-1]
 
-    #get the column definitions for a particular OMOP table
+    # get the column definitions for a particular OMOP table
     cdm_table_columns = get_cdm_table_columns(table_name)
-
 
     phase = 'Received CSV file "%s"' % table_name
     print(phase)
 
-    result = {'passed': False, 'errors': []}
-    result['file_name'] = table_name+file_extension
+    result = {'passed': False, 'errors': [], 'file_name': table_name + file_extension}
     print(table_name)
     result['table_name'] = get_readable_key(table_name)
 
     if cdm_table_columns is None:
         result['errors'].append(dict(message='File is not a OMOP CDM table: %s' % table_name))
+        return result
 
-    else:
+    try:
+        phase = 'Parsing CSV file %s' % file_path
 
-        try:
+        # get column names for this table
+        cdm_column_names = [col['name'] for col in cdm_table_columns]
 
-            phase = 'Parsing CSV file %s' % file_path
+        if not os.path.isfile(file_path):
+            print('File does not exist: %s' % file_path)
+            return result
 
-            # get column names for this table
-            cdm_column_names = [col['name'] for col in cdm_table_columns]
+        if not check_csv_format(file_path):
+            print('Wrongly formatted csv file: %s' % file_path)
+            return result
 
-            if os.path.isfile(file_path):
-                f = open(file_path, 'rb')
-                csv_columns = list(pd.read_csv(remove_bom(f), nrows=1).columns.values)
-                datetime_columns = [col_name.lower() for col_name in csv_columns if 'date' in col_name.lower()]
+        f = open(file_path, 'rb')
+        csv_columns = list(pd.read_csv(remove_bom(f), nrows=1).columns.values)
+        datetime_columns = [col_name.lower() for col_name in csv_columns if 'date' in col_name.lower()]
 
-                #check columns if looks good process file
-                if (_check_columns(cdm_column_names, csv_columns, result)):
+        # check columns if looks good process file
+        if not _check_columns(cdm_column_names, csv_columns, result):
+            return result
 
-                    # read file to be processed
-                    df = pd.read_csv(remove_bom(f), na_values=['', ' ', '.'], parse_dates=datetime_columns,
-                                     infer_datetime_format=True)
-                    print(phase)
+        # read file to be processed
+        df = pd.read_csv(remove_bom(f), sep=',', na_values=['', ' ', '.'], parse_dates=datetime_columns,
+                         infer_datetime_format=True)
+        print(phase)
 
-                    # lowercase field names
-                    df = df.rename(columns=str.lower)
+        # lowercase field names
+        df = df.rename(columns=str.lower)
 
-                    # Check each column exists with correct type and required
-                    for meta_item in cdm_table_columns:
-                        meta_column_name = meta_item['name']
-                        meta_column_required = meta_item['mode']=='required'
-                        meta_column_type = meta_item['type']
-                        submission_has_column = False
+        # Check each column exists with correct type and required
+        for meta_item in cdm_table_columns:
+            meta_column_name = meta_item['name']
+            meta_column_required = meta_item['mode'] == 'required'
+            meta_column_type = meta_item['type']
+            submission_has_column = False
 
-                        for submission_column in df.columns:
-                            if submission_column == meta_column_name:
-                                submission_has_column = True
-                                submission_column_type = df[submission_column].dtype
+            for submission_column in df.columns:
+                if submission_column == meta_column_name:
+                    submission_has_column = True
+                    submission_column_type = df[submission_column].dtype
 
-                                # If all empty don't do type check
-                                if submission_column_type != None:
-                                    if not type_eq(meta_column_type, submission_column_type):
-                                        #find the row that has the issue
-                                        error_row_index = find_error_in_file(submission_column, meta_column_type, submission_column_type, df)
-                                        if error_row_index :
-                                            e = dict(message=MSG_INVALID_TYPE+" line number "+str(error_row_index+1),
-                                                 column_name=submission_column,
-                                                 actual=df[submission_column][error_row_index],
-                                                 expected=meta_column_type)
-                                            result['errors'].append(e)
+                    # If all empty don't do type check
+                    if submission_column_type is not None:
+                        if not type_eq(meta_column_type, submission_column_type):
+                            # find the row that has the issue
+                            error_row_index = find_error_in_file(submission_column, meta_column_type,
+                                                                 submission_column_type, df)
+                            if error_row_index:
+                                e = dict(
+                                    message=MSG_INVALID_TYPE + " line number " + str(error_row_index + 1),
+                                    column_name=submission_column,
+                                    actual=df[submission_column][error_row_index],
+                                    expected=meta_column_type)
+                                result['errors'].append(e)
 
-                                # Check if any nulls present in a required field
-                                if meta_column_required and df[submission_column].isnull().sum()>0:#submission_column['stats']['nulls']:
-                                    result['errors'].append(dict(message=MSG_NULL_DISALLOWED,
-                                                                 column_name=submission_column))
-                                continue
+                    # Check if any nulls present in a required field
+                    if meta_column_required and df[submission_column].isnull().sum() > 0:
+                        # submission_column['stats']['nulls']:
+                        result['errors'].append(dict(message=MSG_NULL_DISALLOWED,
+                                                     column_name=submission_column))
+                    continue
 
-                        #Check if the column is required
-                        if not submission_has_column and meta_column_required:
-                            result['errors'].append(dict(message='Missing required column', column_name=meta_column_name))
-                f.close()
+            # Check if the column is required
+            if not submission_has_column and meta_column_required:
+                result['errors'].append(
+                    dict(message='Missing required column', column_name=meta_column_name))
+        f.close()
 
-        except Exception as e:
-            print(traceback.format_exc())
-            #Adding error message if there is a wrong number of columns in a row
-            result['errors'].append(dict(message=e.args[0].rstrip()))
+    except Exception as e:
+        print(traceback.format_exc())
+        # Adding error message if there is a wrong number of columns in a row
+        result['errors'].append(dict(message=e.args[0].rstrip()))
 
     return result
 
@@ -317,7 +330,7 @@ def evaluate_submission(d):
     df.to_csv(output_file_name, index=False, quoting=csv.QUOTE_ALL)
 
     # changing extension
-    html_output_file_name = output_file_name[:-4]+'.html'
+    html_output_file_name = output_file_name[:-4] + '.html'
 
     df = df.fillna('')
     df.to_html(html_output_file_name, index=False)
