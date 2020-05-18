@@ -175,60 +175,59 @@ def process_file(file_path):
             print('Wrongly formatted csv file: %s' % file_path)
             return result
 
-        f = open(file_path, 'rb')
-        csv_columns = list(pd.read_csv(remove_bom(f), nrows=1).columns.values)
-        datetime_columns = [col_name.lower() for col_name in csv_columns if 'date' in col_name.lower()]
+        with open(file_path, 'rb') as f:
+            csv_columns = list(pd.read_csv(remove_bom(f), nrows=1).columns.values)
+            datetime_columns = [col_name.lower() for col_name in csv_columns if 'date' in col_name.lower()]
 
-        # check columns if looks good process file
-        if not _check_columns(cdm_column_names, csv_columns, result):
-            return result
+            # check columns if looks good process file
+            if not _check_columns(cdm_column_names, csv_columns, result):
+                return result
 
-        # read file to be processed
-        df = pd.read_csv(remove_bom(f), sep=',', na_values=['', ' ', '.'], parse_dates=datetime_columns,
-                         infer_datetime_format=True)
-        print(phase)
+            # read file to be processed
+            df = pd.read_csv(remove_bom(f), sep=',', na_values=['', ' ', '.'], parse_dates=datetime_columns,
+                             infer_datetime_format=True)
+            print(phase)
 
-        # lowercase field names
-        df = df.rename(columns=str.lower)
+            # lowercase field names
+            df = df.rename(columns=str.lower)
 
-        # Check each column exists with correct type and required
-        for meta_item in cdm_table_columns:
-            meta_column_name = meta_item['name']
-            meta_column_required = meta_item['mode'] == 'required'
-            meta_column_type = meta_item['type']
-            submission_has_column = False
+            # Check each column exists with correct type and required
+            for meta_item in cdm_table_columns:
+                meta_column_name = meta_item['name']
+                meta_column_required = meta_item['mode'] == 'required'
+                meta_column_type = meta_item['type']
+                submission_has_column = False
 
-            for submission_column in df.columns:
-                if submission_column == meta_column_name:
-                    submission_has_column = True
-                    submission_column_type = df[submission_column].dtype
+                for submission_column in df.columns:
+                    if submission_column == meta_column_name:
+                        submission_has_column = True
+                        submission_column_type = df[submission_column].dtype
 
-                    # If all empty don't do type check
-                    if submission_column_type is not None:
-                        if not type_eq(meta_column_type, submission_column_type):
-                            # find the row that has the issue
-                            error_row_index = find_error_in_file(submission_column, meta_column_type,
-                                                                 submission_column_type, df)
-                            if error_row_index:
-                                e = dict(
-                                    message=MSG_INVALID_TYPE + " line number " + str(error_row_index + 1),
-                                    column_name=submission_column,
-                                    actual=df[submission_column][error_row_index],
-                                    expected=meta_column_type)
-                                result['errors'].append(e)
+                        # If all empty don't do type check
+                        if submission_column_type is not None:
+                            if not type_eq(meta_column_type, submission_column_type):
+                                # find the row that has the issue
+                                error_row_index = find_error_in_file(submission_column, meta_column_type,
+                                                                     submission_column_type, df)
+                                if error_row_index:
+                                    e = dict(
+                                        message=MSG_INVALID_TYPE + " line number " + str(error_row_index + 1),
+                                        column_name=submission_column,
+                                        actual=df[submission_column][error_row_index],
+                                        expected=meta_column_type)
+                                    result['errors'].append(e)
 
-                    # Check if any nulls present in a required field
-                    if meta_column_required and df[submission_column].isnull().sum() > 0:
-                        # submission_column['stats']['nulls']:
-                        result['errors'].append(dict(message=MSG_NULL_DISALLOWED,
-                                                     column_name=submission_column))
-                    continue
+                        # Check if any nulls present in a required field
+                        if meta_column_required and df[submission_column].isnull().sum() > 0:
+                            # submission_column['stats']['nulls']:
+                            result['errors'].append(dict(message=MSG_NULL_DISALLOWED,
+                                                         column_name=submission_column))
+                        continue
 
-            # Check if the column is required
-            if not submission_has_column and meta_column_required:
-                result['errors'].append(
-                    dict(message='Missing required column', column_name=meta_column_name))
-        f.close()
+                # Check if the column is required
+                if not submission_has_column and meta_column_required:
+                    result['errors'].append(
+                        dict(message='Missing required column', column_name=meta_column_name))
 
     except Exception as e:
         print(traceback.format_exc())
