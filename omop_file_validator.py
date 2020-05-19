@@ -23,9 +23,9 @@ ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
 
 csv.register_dialect('load',
                      quotechar='"',
-                     doublequote=False,
+                     doublequote=True,
                      delimiter=',',
-                     quoting=csv.QUOTE_NONNUMERIC,
+                     quoting=csv.QUOTE_ALL,
                      strict=True)
 
 
@@ -134,6 +134,8 @@ def check_csv_format(f, column_names):
         else:
             print('Header successfully parsed')
         for idx, line in enumerate(reader, start=1):
+            if any('"' in field for field in line):
+                results.append(['Double quote in field, please remove' % (str(idx), line), None, None])
             if len(line) != len(column_names):
                 results.append(['Incorrect number of columns on line %s: %s' % (str(idx), line), None, None])
     except ValueError:
