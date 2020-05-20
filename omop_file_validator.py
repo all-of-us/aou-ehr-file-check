@@ -131,46 +131,48 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type,
 
 def check_csv_format(f, column_names):
     results = []
+    idx = 1
+    line = []
+    header_error_msg = 'Please add/fix incorrect headers at the top of the file, enclosed in double quotes'
+    quote_comma_error_msg = 'Stray double quote or comma within field on line %s'
     try:
         reader = csv.reader(f, dialect='load')
         header = next(reader)
+        line = header
         if header != column_names:
-            results.append([
-                'Please add/fix incorrect headers at the top of the file, enclosed in double quotes',
-                header, column_names
-            ])
-        else:
-            print('Header successfully parsed')
+            results.append([header_error_msg, header, column_names])
         for idx, line in enumerate(reader, start=2):
             for field in line:
                 if '\n' in field:
-                    results.append([
-                        'New line character found on line %s: %s.'
-                        'Please replace newline "\n" with space " "' %
-                        (str(idx), line), None, None
-                    ])
+                    newline_msg = 'Newline character found on line %s: %s\n' \
+                                  'Please replace newline "\\n" characters with space " "' % (str(idx), line)
+                    print(newline_msg)
+                    results.append([newline_msg, None, None])
             if len(line) != len(column_names):
-                results.append([
-                    'Incorrect number of columns on line %s: %s' %
-                    (str(idx), line), None, None
-                ])
-    except Exception:
+                column_mismatch_msg = 'Incorrect number of columns on line %s: %s' % (
+                    str(idx), line)
+                results.append([column_mismatch_msg, None, None])
+    except (ValueError, csv.Error):
         print(traceback.format_exc())
-        print('Stray double quotes in field on line %s' % (str(idx + 1)))
-        if idx > 1:
+        if not line:
+            print(quote_comma_error_msg % (str(idx)))
+            print(header_error_msg + '\n')
+        else:
+            print(quote_comma_error_msg % (str(idx + 1)))
             print('Previously parsed line %s: %s\n' % (str(idx), line))
         print(
-            'Please enclose all non-numeric fields in double-quotes '
-            'e.g. "person_id","2020-05-05",6345 instead of person_id,2020-05-05,6345'
-            'If possible, enclose all fields in double-quotes, e.g. "person_id","2020-05-05","6345"'
+            'Enclose all fields in double-quotes\n'
+            'e.g. person_id,2020-05-05,6345 -> "person_id","2020-05-05","6345"\n'
+            'At a minimum, enclose all non-numeric fields in double-quotes \n'
+            'e.g. person_id,2020-05-05,6345 -> "person_id","2020-05-05",6345\n'
         )
         print(
-            'Pair stray double quotes or remove them if they are inside a field '
-            'e.g. "wound is 1" long" -> "wound is 1"" long" or "wound is 1 long"'
+            'Pair stray double quotes or remove them if they are inside a field \n'
+            'e.g. "wound is 1" long" -> "wound is 1"" long" or "wound is 1 long"\n'
         )
         print(
-            'Remove stray commas if they are inside a field and next to a double quote '
-            'e.g. "drug route: "orally", "topically"" -> "drug route: ""orally"" ""topically"""'
+            'Remove stray commas if they are inside a field and next to a double quote \n'
+            'e.g. "drug route: "orally", "topically"" -> "drug route: ""orally"" ""topically"""\n'
         )
     f.seek(0)
     return results
@@ -214,11 +216,6 @@ def run_checks(file_path, f):
                 dict(message=format_error[0],
                      actual=format_error[1],
                      expected=format_error[2]))
-        if format_errors:
-            print('OMOP file for "%s" not fully parsed. ' % table_name)
-            print(
-                'Please fix format errors to fully process the file for further errors'
-            )
 
         csv_columns = list(pd.read_csv(f, nrows=1).columns.values)
         datetime_columns = [
@@ -310,7 +307,7 @@ def process_file(file_path):
     else:
         with open(file_path, 'r', encoding=enc) as f:
             result = run_checks(file_path, f)
-
+    print('Finished processing %s\n' % file_path)
     return result
 
 
