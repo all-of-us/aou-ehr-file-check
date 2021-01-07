@@ -9,6 +9,7 @@ import csv
 import json
 import datetime
 import collections
+import re
 
 RESULT_SUCCESS = 'success'
 MSG_CANNOT_PARSE_FILENAME = 'Cannot parse filename'
@@ -17,12 +18,16 @@ MSG_INCORRECT_HEADER = 'Column not in table definition'
 MSG_MISSING_HEADER = 'Column missing in file'
 MSG_INCORRECT_ORDER = 'Column not in expected order'
 MSG_NULL_DISALLOWED = 'NULL values are not allowed for column'
-MSG_INVALID_DATE = 'Invalid date format. Expecting "YYYY-MM-DD" or "YYYY-MM-DD hh:mm:ss"'
+MSG_INVALID_DATE = 'Invalid date format. Expecting "YYYY-MM-DD"'
+MSG_INVALID_TIMESTAMP = 'Invalid timestamp format. Expecting "YYYY-MM-DD hh:mm:ss"'
 
 HEADER_KEYS = ['file_name', 'table_name']
 ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
 
-VALID_DATE_FORMATS = ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S']
+VALID_DATE_REGEX = ['^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$']
+VALID_TIMESTAMP_REGEX = [
+    '^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$'
+]
 
 csv.register_dialect('load',
                      quotechar='"',
@@ -95,24 +100,29 @@ def cast_type(cdm_column_type, value):
         return value
 
 
-def date_format_valid(fmt, date_str):
-    """Check if a date string matches a certain format
+def date_format_valid(ptn, date_str, fmt='%Y-%m-%d'):
+    """Check if a date string matches a certain pattern and is compilable into a datetime object
 
-    :param fmt: A C standard-compliant date format
-    :type fmt: string
+    :param ptn: A regex pattern
+    :type ptn: string
     :param date_str: 
     :type date_str: string
-    :return: A boolean indicating if date string matches the format
+    :param fmt: A C standard-compliant date format, defaults to '%Y-%m-%d'
+    :type fmt: str, optional
+    :return: A boolean indicating if date string matches the regex pattern
     :rtype: bool
     """
-    valid = True
+
+    if not re.match(ptn, date_str):
+        return False
 
     try:
+        #Avoids out of range dates, e.g. 2020-02-31
         datetime.datetime.strptime(date_str, fmt)
     except ValueError:
-        valid = False
+        return False
 
-    return valid
+    return True
 
 
 def detect_bom_encoding(file_path):
@@ -295,14 +305,29 @@ def run_checks(file_path, f):
                         if meta_column_type in ('date', 'timestamp'):
                             invalid_indices = []
                             invalid_date_strings = []
+
+                            patterns = []
+                            fmt = ''
+                            err_msg = ''
+
+                            if meta_column_type == 'date':
+                                patterns = VALID_DATE_REGEX
+                                fmt = '%Y-%m-%d'
+                                err_msg = MSG_INVALID_DATE
+                            elif meta_column_type == 'timestamp':
+                                patterns = VALID_TIMESTAMP_REGEX
+                                fmt = '%Y-%m-%d %H:%M:%S'
+                                err_msg = MSG_INVALID_TIMESTAMP
+
                             for idx, value in df[submission_column].iteritems(
                             ):
                                 if not any(
                                         list(
                                             map(
-                                                lambda fmt: date_format_valid(
-                                                    fmt, str(value)),
-                                                VALID_DATE_FORMATS))):
+                                                lambda pattern:
+                                                date_format_valid(
+                                                    pattern, str(value), fmt),
+                                                patterns))):
                                     invalid_indices.append(idx + 1)
                                     invalid_date_strings.append(str(value))
 
@@ -314,7 +339,7 @@ def run_checks(file_path, f):
                                     invalid_indices) > 1 else 'line number'
                                 e = dict(
                                     message=
-                                    f"{MSG_INVALID_DATE}: {line_num_str} ({','.join(invalid_indices)})",
+                                    f"{err_msg}: {line_num_str} ({','.join(invalid_indices)})",
                                     column_name=submission_column)
                                 result['errors'].append(e)
 
