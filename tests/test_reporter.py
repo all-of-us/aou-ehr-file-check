@@ -63,6 +63,23 @@ class TestReporter(unittest.TestCase):
                          actual="",
                          column_name="person_id")
 
+    # "observation.csv" has has invalid date formats in rows 4 and 5
+    def check_invalid_date(self, f_name, e):
+        self.assertEqual(f_name, 'observation.csv')
+        self.assertEqual(
+            e['message'],
+            'Invalid date format. Expecting "YYYY-MM-DD": line numbers (4,5)')
+        self.assertEqual(e['column_name'], 'observation_date')
+
+    # "observation.csv" has has invalid date formats in rows 1, 3, and 5
+    def check_invalid_timestamp(self, f_name, e):
+        self.assertEqual(f_name, 'observation.csv')
+        self.assertEqual(
+            e['message'],
+            'Invalid timestamp format. Expecting "YYYY-MM-DD hh:mm:ss": line numbers (1,3,5)'
+        )
+        self.assertEqual(e['column_name'], 'observation_datetime')
+
     # function to run the above tests
     def test_error_list(self):
         submission_folder = settings.example_path
@@ -83,7 +100,10 @@ class TestReporter(unittest.TestCase):
 
         f_name = "observation.csv"
         if self.assertIn("observation.csv", error_map):
-            self.check_invalid_type(f_name, error_map[f_name][0])
+            self.check_invalid_type(f_name, error_map[f_name][2])
+
+        self.check_invalid_date(f_name, error_map[f_name][0])
+        self.check_invalid_timestamp(f_name, error_map[f_name][1])
 
         f_name = "measurement.csv"
         if self.assertIn("measurement.csv", error_map):
