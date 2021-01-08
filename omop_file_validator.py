@@ -9,6 +9,7 @@ import csv
 import json
 import datetime
 import collections
+import re
 
 RESULT_SUCCESS = 'success'
 MSG_CANNOT_PARSE_FILENAME = 'Cannot parse filename'
@@ -17,9 +18,16 @@ MSG_INCORRECT_HEADER = 'Column not in table definition'
 MSG_MISSING_HEADER = 'Column missing in file'
 MSG_INCORRECT_ORDER = 'Column not in expected order'
 MSG_NULL_DISALLOWED = 'NULL values are not allowed for column'
+MSG_INVALID_DATE = 'Invalid date format. Expecting "YYYY-MM-DD"'
+MSG_INVALID_TIMESTAMP = 'Invalid timestamp format. Expecting "YYYY-MM-DD hh:mm:ss"'
 
 HEADER_KEYS = ['file_name', 'table_name']
 ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
+
+VALID_DATE_REGEX = ['^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$']
+VALID_TIMESTAMP_REGEX = [
+    '^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$'
+]
 
 csv.register_dialect('load',
                      quotechar='"',
@@ -90,6 +98,31 @@ def cast_type(cdm_column_type, value):
     if cdm_column_type == 'timestamp' and isinstance(
             value, datetime.datetime):  # do not do datetime.datetime
         return value
+
+
+def date_format_valid(ptn, date_str, fmt='%Y-%m-%d'):
+    """Check if a date string matches a certain pattern and is compilable into a datetime object
+
+    :param ptn: A regex pattern
+    :type ptn: string
+    :param date_str: 
+    :type date_str: string
+    :param fmt: A C standard-compliant date format, defaults to '%Y-%m-%d'
+    :type fmt: str, optional
+    :return: A boolean indicating if date string matches the regex pattern
+    :rtype: bool
+    """
+
+    if not re.match(ptn, date_str):
+        return False
+
+    try:
+        #Avoids out of range dates, e.g. 2020-02-31
+        datetime.datetime.strptime(date_str, fmt)
+    except ValueError:
+        return False
+
+    return True
 
 
 def detect_bom_encoding(file_path):
@@ -232,8 +265,8 @@ def run_checks(file_path, f):
         df = pd.read_csv(f,
                          sep=',',
                          na_values=['', ' ', '.'],
-                         parse_dates=datetime_columns,
-                         infer_datetime_format=True)
+                         parse_dates=False,
+                         infer_datetime_format=False)
 
         # lowercase field names
         df = df.rename(columns=str.lower)
@@ -266,6 +299,48 @@ def run_checks(file_path, f):
                                          actual=df[submission_column]
                                          [error_row_index],
                                          expected=meta_column_type)
+                                result['errors'].append(e)
+
+                        # Check that date format is in the YYYY-MM-DD or YYYY-MM-DD hh:mm:ss format
+                        if meta_column_type in ('date', 'timestamp'):
+                            invalid_indices = []
+                            invalid_date_strings = []
+
+                            patterns = []
+                            fmt = ''
+                            err_msg = ''
+
+                            if meta_column_type == 'date':
+                                patterns = VALID_DATE_REGEX
+                                fmt = '%Y-%m-%d'
+                                err_msg = MSG_INVALID_DATE
+                            elif meta_column_type == 'timestamp':
+                                patterns = VALID_TIMESTAMP_REGEX
+                                fmt = '%Y-%m-%d %H:%M:%S'
+                                err_msg = MSG_INVALID_TIMESTAMP
+
+                            for idx, value in df[submission_column].iteritems(
+                            ):
+                                if not any(
+                                        list(
+                                            map(
+                                                lambda pattern:
+                                                date_format_valid(
+                                                    pattern, str(value), fmt),
+                                                patterns))):
+                                    invalid_indices.append(idx + 1)
+                                    invalid_date_strings.append(str(value))
+
+                            invalid_indices = [
+                                str(idx) for idx in invalid_indices
+                            ]
+                            if invalid_indices:
+                                line_num_str = 'line numbers' if len(
+                                    invalid_indices) > 1 else 'line number'
+                                e = dict(
+                                    message=
+                                    f"{err_msg}: {line_num_str} ({','.join(invalid_indices)})",
+                                    column_name=submission_column)
                                 result['errors'].append(e)
 
                     # Check if any nulls present in a required field
