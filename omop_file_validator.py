@@ -118,10 +118,8 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type,
 
         try:
             if i <= len(df) - 1:
-                if row[column_name]:
+                if pd.notnull(row[column_name]):
                     cast_type(cdm_column_type, row[column_name])
-                else:
-                    return False
             else:
                 return False
         except ValueError:
@@ -251,7 +249,7 @@ def run_checks(file_path, f):
                     submission_column_type = df[submission_column].dtype
 
                     # If all empty don't do type check
-                    if submission_column_type is not None:
+                    if not df[submission_column].isnull().values.all():
                         if not type_eq(meta_column_type,
                                        submission_column_type):
                             # find the row that has the issue
