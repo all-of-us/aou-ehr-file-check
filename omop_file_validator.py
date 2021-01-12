@@ -161,6 +161,13 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type,
 
 
 def has_blank_lines(f):
+    """Check if any row in a csv file has only empty values
+
+    :param f: A file object
+    :type f: file-like object
+    :return: True if any rows has all empty values, else False
+    :rtype: bool
+    """
     df = pd.read_csv(f)
     if any(
             df.apply(lambda row: all(row.apply(lambda col: pd.isnull(col))),
