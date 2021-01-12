@@ -160,6 +160,16 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type,
             return index
 
 
+def has_blank_lines(f):
+    df = pd.read_csv(f)
+    if any(
+            df.apply(lambda row: all(row.apply(lambda col: pd.isnull(col))),
+                     axis=1)):
+        return True
+    else:
+        return False
+
+
 def check_csv_format(f, column_names):
     results = []
     idx = 1
@@ -253,6 +263,15 @@ def run_checks(file_path, f):
             col_name.lower() for col_name in csv_columns
             if 'date' in col_name.lower()
         ]
+        f.seek(0)
+
+        blank_lines = has_blank_lines(f)
+        if blank_lines:
+            blank_lines_msg = 'File contains blank lines.' \
+                              'If there is no data, please only submit the header line.'
+            result['errors'].append(dict(message=blank_lines_msg))
+            return result
+
         f.seek(0)
 
         # check columns if looks good process file
