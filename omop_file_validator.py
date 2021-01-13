@@ -29,6 +29,8 @@ VALID_TIMESTAMP_REGEX = [
     '^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$'
 ]
 
+SCIENTIFIC_NOTATION_REGEX = "^(?:-?\d*)\.?\d+[eE][-\+]?\d+$"
+
 csv.register_dialect('load',
                      quotechar='"',
                      doublequote=True,
@@ -86,7 +88,9 @@ def cast_type(cdm_column_type, value):
     :return:
     """
     if cdm_column_type in ('integer', 'int64'):
-        return int(value)
+        # Regex check only relevant if submission dtype is 'object'
+        if not re.match(SCIENTIFIC_NOTATION_REGEX, str(value)):
+            return int(value)
     if cdm_column_type in ('character varying', 'text', 'string'):
         return str(value)
     if cdm_column_type == 'numeric':
@@ -174,6 +178,32 @@ def find_blank_lines(f):
         axis=1)].tolist()
 
     return [i + 1 for i in indices]
+
+
+def find_scientific_notation_errors(f, int_columns):
+    df = pd.read_csv(f, dtype=str)
+    df = df.rename(columns=str.lower)
+    df = df[[col for col in int_columns if col in df.columns]]
+
+    errors = []
+    sci_not_count = collections.defaultdict(int)
+
+    for submission_col_name in df.columns:
+        submission_column = df[submission_col_name]
+        for i, value in submission_column.items():
+            if pd.notnull(value) and re.match(SCIENTIFIC_NOTATION_REGEX,
+                                              value):
+                sci_not_count[submission_col_name] += 1
+
+    for col, count in sci_not_count.items():
+        line_str = 'lines' if count > 1 else 'line'
+        e = dict(message=f"Scientific notation was found on {count} {line_str}. " \
+                            "Scientific notation is not allowed for integer fields.",
+                column_name=col
+        )
+        errors.append(e)
+
+    return errors
 
 
 def check_csv_format(f, column_names):
@@ -286,6 +316,17 @@ def run_checks(file_path, f):
         # check columns if looks good process file
         if not _check_columns(cdm_column_names, csv_columns, result):
             return result
+
+        #search for scientific notation
+        int_columns = [
+            col['name'] for col in cdm_table_columns
+            if col['type'] == 'integer'
+        ]
+        sci_not_errors = find_scientific_notation_errors(f, int_columns)
+        for sci_not_error in sci_not_errors:
+            result['errors'].append(sci_not_error)
+
+        f.seek(0)
 
         # read file to be processed
         df = pd.read_csv(f,
