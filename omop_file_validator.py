@@ -186,18 +186,18 @@ def find_scientific_notation_errors(f, int_columns):
     df = df[[col for col in int_columns if col in df.columns]]
 
     errors = []
-    sci_not_count = collections.defaultdict(int)
+    sci_not_line = collections.defaultdict(int)
 
     for submission_col_name in df.columns:
         submission_column = df[submission_col_name]
         for i, value in submission_column.items():
             if pd.notnull(value) and re.match(SCIENTIFIC_NOTATION_REGEX,
                                               value):
-                sci_not_count[submission_col_name] += 1
+                sci_not_line[submission_col_name] = i + 1
+                break
 
-    for col, count in sci_not_count.items():
-        line_str = 'lines' if count > 1 else 'line'
-        e = dict(message=f"Scientific notation was found on {count} {line_str}. " \
+    for col, linenum in sci_not_line.items():
+        e = dict(message=f"Scientific notation was found on line {linenum}. " \
                             "Scientific notation is not allowed for integer fields.",
                 column_name=col
         )
