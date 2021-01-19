@@ -193,14 +193,14 @@ def find_scientific_notation_errors(f, int_columns):
         for i, value in submission_column.items():
             if pd.notnull(value) and re.match(SCIENTIFIC_NOTATION_REGEX,
                                               value):
-                sci_not_line[submission_col_name] = i + 1
+                sci_not_line[submission_col_name] = (value, i + 1)
                 break
 
-    for col, linenum in sci_not_line.items():
-        e = dict(message=f"Scientific notation was found on line {linenum}. " \
-                            "Scientific notation is not allowed for integer fields.",
-                column_name=col
-        )
+    for col, (value, line_num) in sci_not_line.items():
+        e = dict(message=(
+            f"Scientific notation value '{value}' was found on line {line_num}. "
+            "Scientific notation is not allowed for integer fields."),
+                 column_name=col)
         errors.append(e)
 
     return errors
