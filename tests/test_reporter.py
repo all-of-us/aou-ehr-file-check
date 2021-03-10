@@ -101,14 +101,12 @@ class TestReporter(unittest.TestCase):
         f_name = "observation.csv"
         if self.assertIn("observation.csv", error_map):
             self.check_invalid_type(f_name, error_map[f_name][2])
-
-        self.check_invalid_date(f_name, error_map[f_name][0])
-        self.check_invalid_timestamp(f_name, error_map[f_name][1])
+            self.check_invalid_date(f_name, error_map[f_name][0])
+            self.check_invalid_timestamp(f_name, error_map[f_name][1])
 
         f_name = "measurement.csv"
         if self.assertIn("measurement.csv", error_map):
             self.check_required_value(f_name, error_map[f_name][0])
-
             
 if __name__ == '__main__':
     unittest.main()

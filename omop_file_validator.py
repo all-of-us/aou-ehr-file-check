@@ -5,6 +5,7 @@ import settings
 import os
 import codecs
 import pandas as pd
+import numpy as np
 import csv
 import json
 import datetime
@@ -359,21 +360,22 @@ def run_checks(file_path, f):
                                 submission_column, meta_column_type,
                                 submission_column_type, df)
                             if error_row_index:
-                                e = dict(message=MSG_INVALID_TYPE +
-                                         " line number " +
-                                         str(error_row_index + 1),
-                                         column_name=submission_column,
-                                         actual=df[submission_column]
-                                         [error_row_index],
-                                         expected=meta_column_type)
-                                result['errors'].append(e)
+                                # convert pd nan values to empty string
+                                df = df.replace(np.nan, '')
+                                if df[submission_column][error_row_index] == '' and not meta_column_required:
+                                    continue
+                                else:
+                                    e = dict(message=MSG_INVALID_TYPE +
+                                             " line number " +
+                                             str(error_row_index + 1),
+                                             column_name=submission_column,
+                                             actual=df[submission_column]
+                                             [error_row_index],
+                                             expected=meta_column_type)
+                                    result['errors'].append(e)
 
                         # Check that date format is in the YYYY-MM-DD or YYYY-MM-DD hh:mm:ss format
                         if meta_column_type in ('date', 'timestamp'):
-                            invalid_indices = []
-                            invalid_date_strings = []
-
-                            patterns = []
                             fmt = ''
                             err_msg = ''
 
@@ -388,27 +390,22 @@ def run_checks(file_path, f):
 
                             for idx, value in df[submission_column].iteritems(
                             ):
+                                # convert pd nan values to empty string
+                                df = df.replace(np.nan, '')
                                 if not any(
                                         list(
                                             map(
                                                 lambda pattern:
                                                 date_format_valid(
-                                                    pattern, str(value), fmt),
-                                                patterns))):
-                                    invalid_indices.append(idx + 1)
-                                    invalid_date_strings.append(str(value))
-
-                            invalid_indices = [
-                                str(idx) for idx in invalid_indices
-                            ]
-                            if invalid_indices:
-                                line_num_str = 'line numbers' if len(
-                                    invalid_indices) > 1 else 'line number'
-                                e = dict(
-                                    message=
-                                    f"{err_msg}: {line_num_str} ({','.join(invalid_indices)})",
-                                    column_name=submission_column)
-                                result['errors'].append(e)
+                                                    pattern, str(value), fmt), patterns))):
+                                    if value == '' and not meta_column_required:
+                                        continue
+                                    else:
+                                        e = dict(message=err_msg + " line number " + str(idx + 1),
+                                                 column_name=submission_column,
+                                                 actual=value,
+                                                 expected=meta_column_type)
+                                        result['errors'].append(e)
 
                     # Check if any nulls present in a required field
                     if meta_column_required and df[submission_column].isnull(
