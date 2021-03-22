@@ -362,9 +362,7 @@ def run_checks(file_path, f):
                             if error_row_index:
                                 # convert pd nan values to empty string
                                 df = df.replace(np.nan, '')
-                                if df[submission_column][error_row_index] == '' and not meta_column_required:
-                                    continue
-                                else:
+                                if not df[submission_column][error_row_index] == '' and not meta_column_required:
                                     e = dict(message=MSG_INVALID_TYPE +
                                              " line number " +
                                              str(error_row_index + 1),
@@ -398,9 +396,7 @@ def run_checks(file_path, f):
                                                 lambda pattern:
                                                 date_format_valid(
                                                     pattern, str(value), fmt), patterns))):
-                                    if value == '' and not meta_column_required:
-                                        continue
-                                    else:
+                                    if not value == '' and not meta_column_required:
                                         e = dict(message=err_msg + " line number " + str(idx + 1),
                                                  column_name=submission_column,
                                                  actual=value,
