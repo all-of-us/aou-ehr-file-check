@@ -1,3 +1,2 @@
 cchardet
-csvkit
 pandas
