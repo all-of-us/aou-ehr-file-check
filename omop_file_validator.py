@@ -360,8 +360,9 @@ def run_checks(file_path, f):
                                 submission_column, meta_column_type,
                                 submission_column_type, df)
                             if error_row_index:
-                                df = df.replace(np.nan, '')
-                                if not (df[submission_column][error_row_index] == '' and not meta_column_required):
+                                if not (pd.isnull(
+                                        df[submission_column][error_row_index])
+                                        and not meta_column_required):
                                     e = dict(message=MSG_INVALID_TYPE +
                                              " line number " +
                                              str(error_row_index + 1),
@@ -387,15 +388,18 @@ def run_checks(file_path, f):
 
                             for idx, value in df[submission_column].iteritems(
                             ):
-                                df = df.replace(np.nan, '')
                                 if not any(
                                         list(
                                             map(
                                                 lambda pattern:
                                                 date_format_valid(
-                                                    pattern, str(value), fmt), patterns))):
-                                    if not (value == '' and not meta_column_required):
-                                        e = dict(message=err_msg + " line number " + str(idx + 1),
+                                                    pattern, str(value), fmt),
+                                                patterns))):
+                                    if not (pd.isnull(value)
+                                            and not meta_column_required):
+                                        e = dict(message=err_msg +
+                                                 " line number " +
+                                                 str(idx + 1),
                                                  column_name=submission_column,
                                                  actual=value,
                                                  expected=meta_column_type)
