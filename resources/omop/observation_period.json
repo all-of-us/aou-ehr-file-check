@@ -18,20 +18,10 @@
     "description": "The start date of the observation period for which data are available from the data source."
   },
   {
-    "type": "timestamp",
-    "name": "observation_period_start_datetime",
-    "mode": "required"
-  },
-  {
     "type": "date",
     "name": "observation_period_end_date",
     "mode": "required",
     "description": "The end date of the observation period for which data are available from the data source."
-  },
-  {
-    "type": "timestamp",
-    "name": "observation_period_end_datetime",
-    "mode": "required"
   },
   {
     "type": "integer",
