@@ -1,6 +1,6 @@
-"measurement_id","person_id","measurement_concept_id","measurement_date","measurement_datetime","measurement_type_concept_id","operator_concept_id","value_as_number","value_as_concept_id","unit_concept_id","range_low","range_high","provider_id","visit_occurrence_id","measurement_source_value","measurement_source_concept_id","unit_source_value","value_source_value"
-"212","8","2212549","2009-02-02","2009-02-02 05:00:00.000000 UTC","45754907","","","0","","","","226","262","84165","2212549","",""
-"71","7","2213027","2009-04-25","2009-04-25 05:00:00.000000 UTC","45754907","","","0","","","","98","101","87177","2213027","",""
-"91","","2213080","2009-04-25","2009-04-25 05:00:00.000000 UTC","45754907","","","0","","","","98","101","87329","2213080","",""
-"182","7","438878","2008-09-02","2008-09-02 05:00:00.000000 UTC","45754907","","","0","","","","221","247","7948","44831608","",""
-"180","7","438878","2008-09-02","2008-09-02 05:00:00.000000 UTC","45754907","","","0","","","","221","247","7948","44831608","",""
+"measurement_id","person_id","measurement_concept_id","measurement_date","measurement_datetime","measurement_time","measurement_type_concept_id","operator_concept_id","value_as_number","value_as_concept_id","unit_concept_id","range_low","range_high","provider_id","visit_occurrence_id","visit_detail_id","measurement_source_value","measurement_source_concept_id","unit_source_value","value_source_value"
+"212","8","2212549","2009-02-02","2009-02-02 05:00:00.000000 UTC",,45754907,,,"0",,,,"226","262",,"84165","2212549",,
+"71","7","2213027","2009-04-25","2009-04-25 05:00:00.000000 UTC",,45754907,,,"0",,,,"98","101",,"87177","2213027",,
+"91",,"2213080","2009-04-25","2009-04-25 05:00:00.000000 UTC",,45754907,,,"0",,,,"98","101",,"87329","2213080",,
+"182","7","438878","2008-09-02","2008-09-02 05:00:00.000000 UTC",,45754907,,,"0",,,,"221","247",,"7948","44831608",,
+"180","7","438878","2008-09-02","2008-09-02 05:00:00.000000 UTC",,45754907,,,"0",,,,"221","247",,"7948","44831608",,

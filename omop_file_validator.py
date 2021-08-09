@@ -11,7 +11,6 @@ import json
 import datetime
 import collections
 import re
-import exrex
 
 RESULT_SUCCESS = 'success'
 MSG_CANNOT_PARSE_FILENAME = 'Cannot parse filename'
@@ -414,7 +413,7 @@ def run_checks(file_path, f):
                                     if not (pd.isnull(value)
                                             and not meta_column_required):
                                         e = dict(message=err_msg +
-                                                 " line number " +
+                                                 ": line number " +
                                                  str(idx + 1),
                                                  column_name=submission_column,
                                                  actual=value,
