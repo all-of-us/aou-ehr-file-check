@@ -20,15 +20,37 @@ MSG_MISSING_HEADER = 'Column missing in file'
 MSG_INCORRECT_ORDER = 'Column not in expected order'
 MSG_NULL_DISALLOWED = 'NULL values are not allowed for column'
 MSG_INVALID_DATE = 'Invalid date format. Expecting "YYYY-MM-DD"'
-MSG_INVALID_TIMESTAMP = 'Invalid timestamp format. Expecting "YYYY-MM-DD hh:mm:ss"'
+MSG_INVALID_TIMESTAMP = 'Invalid timestamp format. Expecting "YYYY-MM-DD HH:MM:SS[.SSSSSS]"'
 
 HEADER_KEYS = ['file_name', 'table_name']
 ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
 
-VALID_DATE_REGEX = ['^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$']
-VALID_TIMESTAMP_REGEX = [
-    '^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$'
-]
+VALID_DATE_FORMAT = ['%Y-%m-%d']
+
+VALID_TIMESTAMP_FORMAT = ['%Y-%m-%d %H:%M',
+ '%Y-%m-%d %H:%MZ',
+ '%Y-%m-%d %H:%M %Z',
+ '%Y-%m-%d %H:%M %z',
+ '%Y-%m-%d %H:%M:%S',
+ '%Y-%m-%d %H:%M:%SZ',
+ '%Y-%m-%d %H:%M:%S %Z',
+ '%Y-%m-%d %H:%M:%S %z',
+ '%Y-%m-%d %H:%M:%S.%f',
+ '%Y-%m-%d %H:%M:%S.%fZ',
+ '%Y-%m-%d %H:%M:%S.%f %Z',
+ '%Y-%m-%d %H:%M:%S.%f %z',
+ '%Y-%m-%dT%H:%M',
+ '%Y-%m-%dT%H:%MZ',
+ '%Y-%m-%dT%H:%M %Z',
+ '%Y-%m-%dT%H:%M %z',
+ '%Y-%m-%dT%H:%M:%S',
+ '%Y-%m-%dT%H:%M:%SZ',
+ '%Y-%m-%dT%H:%M:%S %Z',
+ '%Y-%m-%dT%H:%M:%S %z',
+ '%Y-%m-%dT%H:%M:%S.%f',
+ '%Y-%m-%dT%H:%M:%S.%fZ',
+ '%Y-%m-%dT%H:%M:%S.%f %Z',
+ '%Y-%m-%dT%H:%M:%S.%f %z']
 
 SCIENTIFIC_NOTATION_REGEX = "^(?:-?\d*)\.?\d+[eE][-\+]?\d+$"
 
@@ -105,21 +127,16 @@ def cast_type(cdm_column_type, value):
         return value
 
 
-def date_format_valid(ptn, date_str, fmt='%Y-%m-%d'):
+def date_format_valid(date_str, fmt='%Y-%m-%d'):
     """Check if a date string matches a certain pattern and is compilable into a datetime object
 
-    :param ptn: A regex pattern
-    :type ptn: string
     :param date_str: 
     :type date_str: string
     :param fmt: A C standard-compliant date format, defaults to '%Y-%m-%d'
     :type fmt: str, optional
-    :return: A boolean indicating if date string matches the regex pattern
+    :return: A boolean indicating if date string matches the date format
     :rtype: bool
     """
-
-    if not re.match(ptn, date_str):
-        return False
 
     try:
         #Avoids out of range dates, e.g. 2020-02-31
@@ -378,12 +395,10 @@ def run_checks(file_path, f):
                             err_msg = ''
 
                             if meta_column_type == 'date':
-                                patterns = VALID_DATE_REGEX
-                                fmt = '%Y-%m-%d'
+                                fmts = VALID_DATE_FORMAT
                                 err_msg = MSG_INVALID_DATE
                             elif meta_column_type == 'timestamp':
-                                patterns = VALID_TIMESTAMP_REGEX
-                                fmt = '%Y-%m-%d %H:%M:%S'
+                                fmts = VALID_TIMESTAMP_FORMAT
                                 err_msg = MSG_INVALID_TIMESTAMP
 
                             for idx, value in df[submission_column].iteritems(
@@ -391,14 +406,14 @@ def run_checks(file_path, f):
                                 if not any(
                                         list(
                                             map(
-                                                lambda pattern:
+                                                lambda fmt:
                                                 date_format_valid(
-                                                    pattern, str(value), fmt),
-                                                patterns))):
+                                                    str(value), fmt),
+                                                fmts))):
                                     if not (pd.isnull(value)
                                             and not meta_column_required):
                                         e = dict(message=err_msg +
-                                                 " line number " +
+                                                 ": line number " +
                                                  str(idx + 1),
                                                  column_name=submission_column,
                                                  actual=value,
