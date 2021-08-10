@@ -30,27 +30,27 @@ VALID_DATE_FORMAT = ['%Y-%m-%d']
 VALID_TIMESTAMP_FORMAT = ['%Y-%m-%d %H:%M',
  '%Y-%m-%d %H:%MZ',
  '%Y-%m-%d %H:%M %Z',
- '%Y-%m-%d %H:%M %z',
+ '%Y-%m-%d %H:%M%z',
  '%Y-%m-%d %H:%M:%S',
  '%Y-%m-%d %H:%M:%SZ',
  '%Y-%m-%d %H:%M:%S %Z',
- '%Y-%m-%d %H:%M:%S %z',
+ '%Y-%m-%d %H:%M:%S%z',
  '%Y-%m-%d %H:%M:%S.%f',
  '%Y-%m-%d %H:%M:%S.%fZ',
  '%Y-%m-%d %H:%M:%S.%f %Z',
- '%Y-%m-%d %H:%M:%S.%f %z',
+ '%Y-%m-%d %H:%M:%S.%f%z',
  '%Y-%m-%dT%H:%M',
  '%Y-%m-%dT%H:%MZ',
  '%Y-%m-%dT%H:%M %Z',
- '%Y-%m-%dT%H:%M %z',
+ '%Y-%m-%dT%H:%M%z',
  '%Y-%m-%dT%H:%M:%S',
  '%Y-%m-%dT%H:%M:%SZ',
  '%Y-%m-%dT%H:%M:%S %Z',
- '%Y-%m-%dT%H:%M:%S %z',
+ '%Y-%m-%dT%H:%M:%S%z',
  '%Y-%m-%dT%H:%M:%S.%f',
  '%Y-%m-%dT%H:%M:%S.%fZ',
  '%Y-%m-%dT%H:%M:%S.%f %Z',
- '%Y-%m-%dT%H:%M:%S.%f %z']
+ '%Y-%m-%dT%H:%M:%S.%f%z']
 
 SCIENTIFIC_NOTATION_REGEX = "^(?:-?\d*)\.?\d+[eE][-\+]?\d+$"
 
