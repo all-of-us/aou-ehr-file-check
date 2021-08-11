@@ -130,7 +130,10 @@ class TestReporter(unittest.TestCase):
         self.assertIn(f_name, error_map)
         self.check_required_value(error_map[f_name], column_name='person_id')
 
-
+        # "visit_detail.csv" has "visit_occurrence_id" as NULL in row 1 but it is a required value
+        f_name = "visit_detail.csv"
+        self.assertIn(f_name, error_map)
+        self.check_required_value(error_map[f_name], column_name='visit_occurrence_id')
 
 
 if __name__ == '__main__':
