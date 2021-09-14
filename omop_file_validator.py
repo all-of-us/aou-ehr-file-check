@@ -419,6 +419,8 @@ def run_checks(file_path, f):
                                                  actual=value,
                                                  expected=meta_column_type)
                                         result['errors'].append(e)
+                                        #only return the first error
+                                        break
 
                     # Check if any nulls present in a required field
                     if meta_column_required and df[submission_column].isnull(

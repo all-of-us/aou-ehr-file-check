@@ -119,11 +119,11 @@ class TestReporter(unittest.TestCase):
                                 column_name="observation_type_concept_id",
                                 expected="integer")
 
-        # "observation.csv" has has invalid date formats in rows 4 and 5
+        # "observation.csv" has has invalid date formats in row 5
         self.check_invalid_date(error_map[f_name], column_name='observation_date', linenumber=5)
 
         # "observation.csv" has has invalid timestamp formats in rows 1, 3, and 5
-        self.check_invalid_timestamp(error_map[f_name], column_name='observation_datetime', linenumber=3)
+        self.check_invalid_timestamp(error_map[f_name], column_name='observation_datetime', linenumber=1)
 
         # "measurement.csv" has "person_id" as NULL in row 3 (line number 4) but it is a required value
         f_name = "measurement.csv"
