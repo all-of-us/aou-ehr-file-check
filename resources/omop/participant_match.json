@@ -1,0 +1,12 @@
+[
+    { "name": "person_id",            "mode": "required", "type": "integer", "description": "A unique identifier for each person. The person_id will be the PMID provided from the DRC. PMID starts with a letter 'P' followed by a series of digits. Please strip off the letter 'P' and only put the digits here." },
+    { "name": "first_name",           "mode": "required", "type": "string",  "description": "Allowed values are match, no_match, missing, and excluded." },
+    { "name": "last_name",            "mode": "required", "type": "string",  "description": "Allowed values are match, no_match, missing, and excluded." },
+    { "name": "dob",                  "mode": "required", "type": "string",  "description": "Allowed values are match, no_match, missing, and excluded." },
+    { "name": "sex",                  "mode": "required", "type": "string",  "description": "Allowed values are match, no_match, missing, and excluded." },
+    { "name": "address",              "mode": "required", "type": "string",  "description": "Allowed values are match, no_match, missing, and excluded." },
+    { "name": "phone_number",         "mode": "required", "type": "string",  "description": "Allowed values are match, no_match, missing, and excluded." },
+    { "name": "email",                "mode": "required", "type": "string",  "description": "Allowed values are match, no_match, missing, and excluded." },
+    { "name": "algorithm_validation", "mode": "required", "type": "string",  "description": "Algorithm Validation is for the sites' `automated` matching approach: eg, first name, last name, and DOB all matched." },
+    { "name": "manual_validation",    "mode": "required", "type": "string",  "description": "Manual validation additionally tracks whether an individual manually reviewed the EHR-AoU linkage." }
+]
