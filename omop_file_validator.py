@@ -353,8 +353,6 @@ def run_checks(file_path, f):
                          parse_dates=False,
                          infer_datetime_format=False)
 
-        # lowercase field names
-        df = df.rename(columns=str.lower)
 
         # Check each column exists with correct type and required
         for meta_item in cdm_table_columns:
