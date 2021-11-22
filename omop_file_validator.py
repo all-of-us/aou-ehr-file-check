@@ -191,9 +191,12 @@ def find_blank_lines(f):
     :rtype: list
     """
     df = pd.read_csv(f)
-    indices = df.index[df.apply(
+    indices = []
+    empty_criteria = df.apply(
         lambda row: all(row.apply(lambda col: pd.isnull(col))),
-        axis=1)].tolist()
+        axis=1).astype(int)
+    
+    indices = df.index[empty_criteria].tolist()
 
     return [i + 1 for i in indices]
 
@@ -243,10 +246,12 @@ def check_csv_format(f, column_names):
                                   'Please replace newline "\\n" characters with space " "' % (str(idx), line)
                     print(newline_msg)
                     results.append([newline_msg, None, None])
+                    break
             if len(line) != len(column_names):
                 column_mismatch_msg = 'Incorrect number of columns on line %s: %s' % (
                     str(idx), line)
                 results.append([column_mismatch_msg, None, None])
+                break
     except (ValueError, csv.Error):
         print(traceback.format_exc())
         if not line:
