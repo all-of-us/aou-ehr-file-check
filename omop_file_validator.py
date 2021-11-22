@@ -194,7 +194,7 @@ def find_blank_lines(f):
     indices = []
     empty_criteria = df.apply(
         lambda row: all(row.apply(lambda col: pd.isnull(col))),
-        axis=1).astype(int)
+        axis=1).astype(bool)
     
     indices = df.index[empty_criteria].tolist()
 
