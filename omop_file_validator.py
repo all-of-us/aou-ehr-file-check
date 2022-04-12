@@ -27,30 +27,17 @@ ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
 
 VALID_DATE_FORMAT = ['%Y-%m-%d']
 
-VALID_TIMESTAMP_FORMAT = ['%Y-%m-%d %H:%M',
- '%Y-%m-%d %H:%MZ',
- '%Y-%m-%d %H:%M %Z',
- '%Y-%m-%d %H:%M%z',
- '%Y-%m-%d %H:%M:%S',
- '%Y-%m-%d %H:%M:%SZ',
- '%Y-%m-%d %H:%M:%S %Z',
- '%Y-%m-%d %H:%M:%S%z',
- '%Y-%m-%d %H:%M:%S.%f',
- '%Y-%m-%d %H:%M:%S.%fZ',
- '%Y-%m-%d %H:%M:%S.%f %Z',
- '%Y-%m-%d %H:%M:%S.%f%z',
- '%Y-%m-%dT%H:%M',
- '%Y-%m-%dT%H:%MZ',
- '%Y-%m-%dT%H:%M %Z',
- '%Y-%m-%dT%H:%M%z',
- '%Y-%m-%dT%H:%M:%S',
- '%Y-%m-%dT%H:%M:%SZ',
- '%Y-%m-%dT%H:%M:%S %Z',
- '%Y-%m-%dT%H:%M:%S%z',
- '%Y-%m-%dT%H:%M:%S.%f',
- '%Y-%m-%dT%H:%M:%S.%fZ',
- '%Y-%m-%dT%H:%M:%S.%f %Z',
- '%Y-%m-%dT%H:%M:%S.%f%z']
+VALID_TIMESTAMP_FORMAT = [
+    '%Y-%m-%d %H:%M', '%Y-%m-%d %H:%MZ', '%Y-%m-%d %H:%M %Z',
+    '%Y-%m-%d %H:%M%z', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%SZ',
+    '%Y-%m-%d %H:%M:%S %Z', '%Y-%m-%d %H:%M:%S%z', '%Y-%m-%d %H:%M:%S.%f',
+    '%Y-%m-%d %H:%M:%S.%fZ', '%Y-%m-%d %H:%M:%S.%f %Z',
+    '%Y-%m-%d %H:%M:%S.%f%z', '%Y-%m-%dT%H:%M', '%Y-%m-%dT%H:%MZ',
+    '%Y-%m-%dT%H:%M %Z', '%Y-%m-%dT%H:%M%z', '%Y-%m-%dT%H:%M:%S',
+    '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S %Z', '%Y-%m-%dT%H:%M:%S%z',
+    '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%S.%f %Z',
+    '%Y-%m-%dT%H:%M:%S.%f%z'
+]
 
 SCIENTIFIC_NOTATION_REGEX = "^(?:-?\d*)\.?\d+[eE][-\+]?\d+$"
 
@@ -195,7 +182,7 @@ def find_blank_lines(f):
     empty_criteria = df.apply(
         lambda row: all(row.apply(lambda col: pd.isnull(col))),
         axis=1).astype(bool)
-    
+
     indices = df.index[empty_criteria].tolist()
 
     return [i + 1 for i in indices]
@@ -257,8 +244,12 @@ def check_csv_format(f, column_names):
         if not line:
             print(quote_comma_error_msg % (str(idx)))
             print(header_error_msg + '\n')
+            results.append([quote_comma_error_msg % (str(idx)), None, None])
+            results.append([header_error_msg + '\n', None, None])
         else:
             print(quote_comma_error_msg % (str(idx + 1)))
+            results.append(
+                [quote_comma_error_msg % (str(idx + 1)), None, None])
             print('Previously parsed line %s: %s\n' % (str(idx), line))
         print(
             'Enclose all fields in double-quotes\n'
@@ -358,7 +349,6 @@ def run_checks(file_path, f):
                          parse_dates=False,
                          infer_datetime_format=False)
 
-
         # Check each column exists with correct type and required
         for meta_item in cdm_table_columns:
             meta_column_name = meta_item['name']
@@ -409,10 +399,8 @@ def run_checks(file_path, f):
                                 if not any(
                                         list(
                                             map(
-                                                lambda fmt:
-                                                date_format_valid(
-                                                    str(value), fmt),
-                                                fmts))):
+                                                lambda fmt: date_format_valid(
+                                                    str(value), fmt), fmts))):
                                     if not (pd.isnull(value)
                                             and not meta_column_required):
                                         e = dict(message=err_msg +
