@@ -182,7 +182,7 @@ def find_blank_lines(f):
     empty_criteria = df.apply(
         lambda row: all(row.apply(lambda col: pd.isnull(col))),
         axis=1).astype(bool)
-    
+
     indices = df.index[empty_criteria].tolist()
 
     return [i + 1 for i in indices]
@@ -244,8 +244,12 @@ def check_csv_format(f, column_names):
         if not line:
             print(quote_comma_error_msg % (str(idx)))
             print(header_error_msg + '\n')
+            results.append([quote_comma_error_msg % (str(idx)), None, None])
+            results.append([header_error_msg + '\n', None, None])
         else:
             print(quote_comma_error_msg % (str(idx + 1)))
+            results.append(
+                [quote_comma_error_msg % (str(idx + 1)), None, None])
             print('Previously parsed line %s: %s\n' % (str(idx), line))
         print(
             'Enclose all fields in double-quotes\n'
