@@ -16,7 +16,6 @@ class TestReporter(unittest.TestCase):
         self.assertIn(message, all_messages)
 
         message_index = all_messages.index(message)
-        
 
         if actual is not None:
             self.assertEqual(errors[message_index]['actual'], actual)
@@ -65,17 +64,18 @@ class TestReporter(unittest.TestCase):
             errors,
             message=
             f'Invalid date format. Expecting "YYYY-MM-DD": line number {linenumber}',
-            column_name=column_name
-        )
+            column_name=column_name)
 
-    def check_invalid_timestamp(self, errors, column_name=None, linenumber=None):
+    def check_invalid_timestamp(self,
+                                errors,
+                                column_name=None,
+                                linenumber=None):
         self.check_error(
             errors,
-            message=f'Invalid timestamp format. Expecting "YYYY-MM-DD HH:MM:SS[.SSSSSS]": line number {linenumber}',
-            column_name=column_name
-        )
+            message=
+            f'Invalid timestamp format. Expecting "YYYY-MM-DD HH:MM:SS[.SSSSSS]": line number {linenumber}',
+            column_name=column_name)
 
-    
     def check_required_value(self, errors, actual=None, column_name=None):
         self.check_error(errors,
                          message=omop_file_validator.MSG_NULL_DISALLOWED,
@@ -120,10 +120,14 @@ class TestReporter(unittest.TestCase):
                                 expected="integer")
 
         # "observation.csv" has has invalid date formats in row 5
-        self.check_invalid_date(error_map[f_name], column_name='observation_date', linenumber=5)
+        self.check_invalid_date(error_map[f_name],
+                                column_name='observation_date',
+                                linenumber=5)
 
         # "observation.csv" has has invalid timestamp formats in rows 1, 3, and 5
-        self.check_invalid_timestamp(error_map[f_name], column_name='observation_datetime', linenumber=1)
+        self.check_invalid_timestamp(error_map[f_name],
+                                     column_name='observation_datetime',
+                                     linenumber=3)
 
         # "measurement.csv" has "person_id" as NULL in row 3 (line number 4) but it is a required value
         f_name = "measurement.csv"
@@ -133,7 +137,8 @@ class TestReporter(unittest.TestCase):
         # "visit_detail.csv" has "visit_occurrence_id" as NULL in row 1 but it is a required value
         f_name = "visit_detail.csv"
         self.assertIn(f_name, error_map)
-        self.check_required_value(error_map[f_name], column_name='visit_occurrence_id')
+        self.check_required_value(error_map[f_name],
+                                  column_name='visit_occurrence_id')
 
 
 if __name__ == '__main__':

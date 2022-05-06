@@ -18,6 +18,6 @@
 "observation.csv","Observation","Scientific notation value '7.47e8' was found on line 2. Scientific notation is not allowed for integer fields.","observation_type_concept_id","",""
 "observation.csv","Observation","Type mismatch line number 5","observation_id","23.890+11","integer"
 "observation.csv","Observation","Invalid date format. Expecting ""YYYY-MM-DD"": line number 5","observation_date","01-31-1963","date"
-"observation.csv","Observation","Invalid timestamp format. Expecting ""YYYY-MM-DD HH:MM:SS[.SSSSSS]"": line number 1","observation_datetime","1989-10-07 22:13:11.1533266","timestamp"
+"observation.csv","Observation","Invalid timestamp format. Expecting ""YYYY-MM-DD HH:MM:SS[.SSSSSS]"": line number 3","observation_datetime","04-15-1987 06:06:30.6260548","timestamp"
 "observation.csv","Observation","Type mismatch line number 3","observation_type_concept_id","unknown","integer"
 "visit_detail.csv","Visit Detail","NULL values are not allowed for column","visit_occurrence_id","",""

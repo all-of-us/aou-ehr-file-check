@@ -27,30 +27,17 @@ ERROR_KEYS = ['message', 'column_name', 'actual', 'expected']
 
 VALID_DATE_FORMAT = ['%Y-%m-%d']
 
-VALID_TIMESTAMP_FORMAT = ['%Y-%m-%d %H:%M',
- '%Y-%m-%d %H:%MZ',
- '%Y-%m-%d %H:%M %Z',
- '%Y-%m-%d %H:%M%z',
- '%Y-%m-%d %H:%M:%S',
- '%Y-%m-%d %H:%M:%SZ',
- '%Y-%m-%d %H:%M:%S %Z',
- '%Y-%m-%d %H:%M:%S%z',
- '%Y-%m-%d %H:%M:%S.%f',
- '%Y-%m-%d %H:%M:%S.%fZ',
- '%Y-%m-%d %H:%M:%S.%f %Z',
- '%Y-%m-%d %H:%M:%S.%f%z',
- '%Y-%m-%dT%H:%M',
- '%Y-%m-%dT%H:%MZ',
- '%Y-%m-%dT%H:%M %Z',
- '%Y-%m-%dT%H:%M%z',
- '%Y-%m-%dT%H:%M:%S',
- '%Y-%m-%dT%H:%M:%SZ',
- '%Y-%m-%dT%H:%M:%S %Z',
- '%Y-%m-%dT%H:%M:%S%z',
- '%Y-%m-%dT%H:%M:%S.%f',
- '%Y-%m-%dT%H:%M:%S.%fZ',
- '%Y-%m-%dT%H:%M:%S.%f %Z',
- '%Y-%m-%dT%H:%M:%S.%f%z']
+VALID_TIMESTAMP_FORMAT = [
+    '%Y-%m-%d %H:%M', '%Y-%m-%d %H:%MZ', '%Y-%m-%d %H:%M %Z',
+    '%Y-%m-%d %H:%M%z', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%SZ',
+    '%Y-%m-%d %H:%M:%S %Z', '%Y-%m-%d %H:%M:%S%z', '%Y-%m-%d %H:%M:%S.%f',
+    '%Y-%m-%d %H:%M:%S.%fZ', '%Y-%m-%d %H:%M:%S.%f %Z',
+    '%Y-%m-%d %H:%M:%S.%f%z', '%Y-%m-%dT%H:%M', '%Y-%m-%dT%H:%MZ',
+    '%Y-%m-%dT%H:%M %Z', '%Y-%m-%dT%H:%M%z', '%Y-%m-%dT%H:%M:%S',
+    '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S %Z', '%Y-%m-%dT%H:%M:%S%z',
+    '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%S.%f %Z',
+    '%Y-%m-%dT%H:%M:%S.%f%z'
+]
 
 SCIENTIFIC_NOTATION_REGEX = "^(?:-?\d*)\.?\d+[eE][-\+]?\d+$"
 
@@ -140,7 +127,7 @@ def date_format_valid(date_str, fmt='%Y-%m-%d'):
 
     try:
         #Avoids out of range dates, e.g. 2020-02-31
-        datetime.datetime.strptime(date_str, fmt)
+        pd.to_datetime(date_str, format=fmt)  # this will allow >6 microseconds
     except ValueError:
         return False
 
@@ -358,7 +345,6 @@ def run_checks(file_path, f):
                          parse_dates=False,
                          infer_datetime_format=False)
 
-
         # Check each column exists with correct type and required
         for meta_item in cdm_table_columns:
             meta_column_name = meta_item['name']
@@ -409,10 +395,8 @@ def run_checks(file_path, f):
                                 if not any(
                                         list(
                                             map(
-                                                lambda fmt:
-                                                date_format_valid(
-                                                    str(value), fmt),
-                                                fmts))):
+                                                lambda fmt: date_format_valid(
+                                                    str(value), fmt), fmts))):
                                     if not (pd.isnull(value)
                                             and not meta_column_required):
                                         e = dict(message=err_msg +
