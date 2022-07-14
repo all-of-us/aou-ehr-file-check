@@ -11,6 +11,7 @@ import json
 import datetime
 import collections
 import re
+from pathlib import Path
 
 RESULT_SUCCESS = 'success'
 MSG_CANNOT_PARSE_FILENAME = 'Cannot parse filename'
@@ -270,15 +271,13 @@ def check_csv_format(f, column_names):
 
 
 def run_checks(file_path, f):
-    file_name, file_extension = os.path.splitext(file_path)
-    file_path_parts = file_name.split(os.sep)
-    table_name = file_path_parts[-1]
-    print('Found CSV file %s' % file_path)
+    table_name = file_path.stem
+    print(f'Found {file_path.suffix} file %s' % file_path)
 
     result = {
         'passed': False,
         'errors': [],
-        'file_name': table_name + file_extension,
+        'file_name': file_path.name,
         'table_name': get_readable_key(table_name)
     }
 
@@ -438,12 +437,24 @@ def run_checks(file_path, f):
     return result
 
 
-def process_file(file_path):
-    """
-    This function processes the submitted file
-    :return: A dictionary of errors found in the file. If there are no errors,
+def run_json_checks(file_path, f):
+    pass
+
+
+def process_file(file_path: Path) -> dict:
+    """This function processes the submitted file
+
+    :param Path file_path: A path to a .csv, .json, or .jsonl file
+    :return dict: A dictionary of errors found in the file. If there are no errors,
     then only the error report headers will in the results.
     """
+    run_checks = None
+    if file_path.suffix == 'csv':
+        run_checks = run_csv_checks
+    elif file_path.suffix in ('json', 'jsonl'):
+        run_checks = run_json_checks
+    else:
+        raise (ValueError('File is not a csv or json file.'))
 
     enc = detect_bom_encoding(file_path)
     if enc is None:
@@ -506,6 +517,14 @@ def generate_pretty_html(html_output_file_name):
             f.write(line)
 
 
+def get_files(base_path, extensions):
+    files = []
+    for ext in extensions:
+        files.extend(Path(base_path).glob(f"*.{ext}"))
+
+    return files
+
+
 def evaluate_submission(d):
     out_dir = os.path.join(d, 'errors')
     if not os.path.exists(out_dir):
@@ -524,9 +543,9 @@ def evaluate_submission(d):
         new_key = get_readable_key(key)
         table_names[key] = new_key
 
-    for f in glob.glob(os.path.join(d, '*.csv')):
-        file_path_parts = f.split(os.sep)
-        file_name = file_path_parts[-1]
+    file_types = ['csv', 'json', 'jsonl']
+    for f in get_files(d, file_types):
+        file_name = f.name
 
         result = process_file(f)
         rows = []
