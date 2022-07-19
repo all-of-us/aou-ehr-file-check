@@ -56,6 +56,17 @@ def get_readable_key(key):
     return new_key
 
 
+def read_file_as_dataframe(f, ext='csv', **kwargs):
+    if ext in ('json', 'jsonl'):
+        df = pd.read_json(f, lines=True, **kwargs)
+    elif ext == 'csv':
+        df = pd.read_csv(f, **kwargs)
+    else:
+        df = pd.read_csv(f, **kwargs)
+
+    return df
+
+
 def get_cdm_table_columns(table_name):
     # allow files to be found regardless of CaSe
     file = os.path.join(settings.cdm_metadata_path,
@@ -170,7 +181,17 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type,
             return index
 
 
-def find_blank_lines(f):
+def find_error_in_row(row, column_name, cdm_column_type):
+    try:
+        if pd.notnull(row[column_name].iloc[0]):
+            cast_type(cdm_column_type, row[column_name].iloc[0])
+        return False
+    except ValueError:
+        # print(row[column_name])
+        return True
+
+
+def find_blank_lines(f, ext='csv'):
     """Check for rows in a csv file with only empty values
 
     :param f: A file object
@@ -178,7 +199,7 @@ def find_blank_lines(f):
     :return: List of rows with all empty values
     :rtype: list
     """
-    df = pd.read_csv(f)
+    df = read_file_as_dataframe(f, ext=ext)
     indices = []
     empty_criteria = df.apply(
         lambda row: all(row.apply(lambda col: pd.isnull(col))),
@@ -189,8 +210,14 @@ def find_blank_lines(f):
     return [i + 1 for i in indices]
 
 
-def find_scientific_notation_errors(f, int_columns):
-    df = pd.read_csv(f, dtype=str)
+def is_line_blank(row):
+    is_blank = all(row.apply(lambda col: pd.isnull(col)))
+
+    return is_blank
+
+
+def find_scientific_notation_errors(f, int_columns, ext='csv'):
+    df = read_file_as_dataframe(f, dtype=str, ext=ext)
     df = df.rename(columns=str.lower)
     df = df[[col for col in int_columns if col in df.columns]]
 
@@ -205,14 +232,28 @@ def find_scientific_notation_errors(f, int_columns):
                 sci_not_line[submission_col_name] = (value, i + 1)
                 break
 
-    for col, (value, line_num) in sci_not_line.items():
-        e = dict(message=(
-            f"Scientific notation value '{value}' was found on line {line_num}. "
-            "Scientific notation is not allowed for integer fields."),
-                 column_name=col)
-        errors.append(e)
+    # for col, (value, line_num) in sci_not_line.items():
+    #     e = dict(message=(
+    #         f"Scientific notation value '{value}' was found on line {line_num}. "
+    #         "Scientific notation is not allowed for integer fields."),
+    #              column_name=col)
+    #     errors.append(e)
 
-    return errors
+    return sci_not_line
+
+
+def has_scientific_notation_error(row, int_columns):
+    row = row[[col for col in int_columns if col in row.columns]]
+    sci_not_line = collections.defaultdict(int)
+
+    for submission_col_name in row.columns:
+        value = str(row[submission_col_name].loc[0])
+
+        if pd.notnull(value) and re.match(SCIENTIFIC_NOTATION_REGEX,
+                                          str(value)):
+            sci_not_line[submission_col_name] = value
+
+    return sci_not_line
 
 
 def check_csv_format(f, column_names):
@@ -270,9 +311,47 @@ def check_csv_format(f, column_names):
     return results
 
 
-def run_checks(file_path, f):
+def check_json_format(f, column_names):
+    results = []
+    idx = 1
+
+    try:
+        json_list = list(f)
+
+        for idx, json_str in enumerate(json_list, start=1):
+            json_obj = json.loads(json_str)
+            if len(json_obj.values()) != len(column_names):
+                column_mismatch_msg = 'Incorrect number of columns on line %s: %s' % (
+                    str(idx), json_str)
+                results.append([column_mismatch_msg, None, None])
+                break
+    except (json.JSONDecodeError, ValueError):
+        error_msg = f"The following exception was raised on line {idx}:\n\n{traceback.format_exc()}"
+
+        results.append([error_msg, None, None])
+
+        # print(
+        #     'Enclose all fields in double-quotes\n'
+        #     'e.g. person_id,2020-05-05,6345 -> "person_id","2020-05-05","6345"\n'
+        #     'At a minimum, enclose all non-numeric fields in double-quotes \n'
+        #     'e.g. person_id,2020-05-05,6345 -> "person_id","2020-05-05",6345\n'
+        # )
+        # print(
+        #     'Pair stray double quotes or remove them if they are inside a field \n'
+        #     'e.g. "wound is 1" long" -> "wound is 1"" long" or "wound is 1 long"\n'
+        # )
+        # print(
+        #     'Remove stray commas if they are inside a field and next to a double quote \n'
+        #     'e.g. "drug route: "orally", "topically"" -> "drug route: ""orally"" ""topically"""\n'
+        # )
+    f.seek(0)
+    return results
+
+
+def run_csv_checks(file_path, f):
     table_name = file_path.stem
-    print(f'Found {file_path.suffix} file %s' % file_path)
+    ext = file_path.suffix
+    print(f'Found {ext} file %s' % file_path)
 
     result = {
         'passed': False,
@@ -293,7 +372,7 @@ def run_checks(file_path, f):
     # get column names for this table
     cdm_column_names = [col['name'] for col in cdm_table_columns]
 
-    if not os.path.isfile(file_path):
+    if not file_path.exists():
         print('File does not exist: %s' % file_path)
         return result
 
@@ -314,7 +393,7 @@ def run_checks(file_path, f):
         ]
         f.seek(0)
 
-        blank_lines = find_blank_lines(f)
+        blank_lines = find_blank_lines(f, ext=ext)
         if blank_lines:
             blank_lines_str = ",".join(map(str, blank_lines))
             line_str = 'lines' if len(blank_lines) > 1 else 'line'
@@ -335,7 +414,9 @@ def run_checks(file_path, f):
             col['name'] for col in cdm_table_columns
             if col['type'] == 'integer'
         ]
-        sci_not_errors = find_scientific_notation_errors(f, int_columns)
+        sci_not_errors = find_scientific_notation_errors(f,
+                                                         int_columns,
+                                                         ext=ext)
         for sci_not_error in sci_not_errors:
             result['errors'].append(sci_not_error)
 
@@ -438,7 +519,143 @@ def run_checks(file_path, f):
 
 
 def run_json_checks(file_path, f):
-    pass
+    table_name = file_path.stem
+    print(f'Found {file_path.suffix} file %s' % file_path)
+
+    result = {
+        'passed': False,
+        'errors': [],
+        'file_name': file_path.name,
+        'table_name': get_readable_key(table_name)
+    }
+
+    # get the column definitions for a particular OMOP table
+    cdm_table_columns = get_cdm_table_columns(table_name)
+
+    if cdm_table_columns is None:
+        msg = '"%s" is not a valid OMOP table' % table_name
+        print(msg)
+        result['errors'].append(dict(message=msg))
+        return result
+
+    # get column names for this table
+    cdm_column_names = [col['name'] for col in cdm_table_columns]
+
+    if not file_path.exists():
+        print('File does not exist: %s' % file_path)
+        return result
+
+    try:
+        print(f'Parsing JSONl file for OMOP table "%s"' % table_name)
+
+        format_errors = check_json_format(f, cdm_column_names)
+
+        for format_error in format_errors:
+            result['errors'].append(
+                dict(message=format_error[0],
+                     actual=format_error[1],
+                     expected=format_error[2]))
+
+        f.seek(0)
+
+        json_list = list(f)
+        row_error_found = False
+
+        for idx, json_str in enumerate(json_list, start=1):
+            if row_error_found:
+                break
+
+            row = pd.read_json(json_str,
+                               nrows=1,
+                               lines=True,
+                               convert_dates=False)
+
+            if is_line_blank(row.iloc[0]):
+                blank_lines_msg = f'File contains blank line on line {idx}.'
+
+                result['errors'].append(dict(message=blank_lines_msg))
+                row_error_found = True
+
+            #search for scientific notation
+            int_columns = [
+                col['name'] for col in cdm_table_columns
+                if col['type'] == 'integer'
+            ]
+
+            sci_not_line = has_scientific_notation_error(row, int_columns)
+            for col, (value, line_num) in sci_not_line.items():
+                sci_not_error_msg = dict(message=(
+                    f"Scientific notation value '{value}' was found on line {idx}. "
+                    "Scientific notation is not allowed for integer fields."),
+                                         column_name=col)
+                result['errors'].append(sci_not_error_msg)
+                row_error_found = True
+
+            for meta_item in cdm_table_columns:
+                meta_column_name = meta_item['name']
+                meta_column_required = meta_item['mode'] == 'required'
+                meta_column_type = meta_item['type']
+
+                if meta_column_name not in row.columns and meta_column_required:
+                    result['errors'].append(
+                        dict(message='Missing required column',
+                             column_name=meta_column_name))
+                    row_error_found = True
+                elif pd.isnull(
+                        row[meta_column_name].loc[0]) and meta_column_required:
+                    result['errors'].append(
+                        dict(message=MSG_NULL_DISALLOWED,
+                             column_name=meta_column_name))
+                    row_error_found = True
+                else:
+                    value = row[meta_column_name].loc[0]
+                    row_column_type = row[meta_column_name].dtype
+
+                    if find_error_in_row(row, meta_column_name,
+                                         meta_column_type):
+                        e = dict(message=MSG_INVALID_TYPE + " line number " +
+                                 str(idx + 1),
+                                 column_name=meta_column_name,
+                                 actual=value,
+                                 expected=meta_column_type)
+                        result['errors'].append(e)
+                        row_error_found = True
+
+                    # Check that date format is in the YYYY-MM-DD or YYYY-MM-DD hh:mm:ss format
+                    if meta_column_type in ('date', 'timestamp'):
+                        fmts = ''
+                        err_msg = ''
+
+                        if meta_column_type == 'date':
+                            fmts = VALID_DATE_FORMAT
+                            err_msg = MSG_INVALID_DATE
+                        elif meta_column_type == 'timestamp':
+                            fmts = VALID_TIMESTAMP_FORMAT
+                            err_msg = MSG_INVALID_TIMESTAMP
+
+                        if not any(
+                                list(
+                                    map(
+                                        lambda fmt: date_format_valid(
+                                            str(value), fmt), fmts))):
+                            e = dict(message=err_msg + ": line number " +
+                                     str(idx + 1),
+                                     column_name=meta_column_name,
+                                     actual=value,
+                                     expected=meta_column_type)
+                            result['errors'].append(e)
+                            row_error_found = True
+
+    except Exception as e:
+        print(traceback.format_exc())
+        # Adding error message if there is a wrong number of columns in a row
+        # result['errors'].append(dict(message=e.args[0].rstrip()))
+        # row_error_found = True
+    else:
+        print(
+            'CSV file for "%s" parsed successfully. Please check for errors in the results files.'
+            % table_name)
+    return result
 
 
 def process_file(file_path: Path) -> dict:
@@ -448,10 +665,11 @@ def process_file(file_path: Path) -> dict:
     :return dict: A dictionary of errors found in the file. If there are no errors,
     then only the error report headers will in the results.
     """
+
     run_checks = None
-    if file_path.suffix == 'csv':
+    if file_path.suffix == '.csv':
         run_checks = run_csv_checks
-    elif file_path.suffix in ('json', 'jsonl'):
+    elif file_path.suffix in ('.json', '.jsonl'):
         run_checks = run_json_checks
     else:
         raise (ValueError('File is not a csv or json file.'))
