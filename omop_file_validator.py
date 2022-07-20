@@ -405,9 +405,8 @@ def run_csv_checks(file_path, f):
 
         f.seek(0)
 
-        # check columns if looks good process file
-        if not _check_columns(cdm_column_names, csv_columns, result):
-            return result
+        # check column names
+        _check_columns(cdm_column_names, csv_columns, result)
 
         #search for scientific notation
         int_columns = [
@@ -579,6 +578,10 @@ def run_json_checks(file_path, f):
                 blank_lines_msg = f'File contains blank line on line {idx}.'
 
                 result['errors'].append(dict(message=blank_lines_msg))
+                row_error_found = True
+
+            # check columns if looks good process file
+            if not _check_columns(cdm_column_names, row.columns, result):
                 row_error_found = True
 
             #search for scientific notation
