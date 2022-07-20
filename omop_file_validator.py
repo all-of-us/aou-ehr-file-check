@@ -417,8 +417,13 @@ def run_csv_checks(file_path, f):
         sci_not_errors = find_scientific_notation_errors(f,
                                                          int_columns,
                                                          ext=ext)
-        for sci_not_error in sci_not_errors:
-            result['errors'].append(sci_not_error)
+
+        for col, (value, line_num) in sci_not_errors.items():
+            e = dict(message=(
+                f"Scientific notation value '{value}' was found on line {line_num}. "
+                "Scientific notation is not allowed for integer fields."),
+                     column_name=col)
+            result['errors'].append(e)
 
         f.seek(0)
 
