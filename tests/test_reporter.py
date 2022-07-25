@@ -144,7 +144,7 @@ class TestReporter(unittest.TestCase):
         submission_folder = settings.example_path
         error_map = omop_file_validator.evaluate_submission(submission_folder)
 
-        f_name = "note.json"
+        f_name = "note.jsonl"
         self.assertIn(f_name, error_map)
 
         self.check_incorrect_column(error_map[f_name],

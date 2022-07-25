@@ -57,7 +57,7 @@ def get_readable_key(key):
 
 
 def read_file_as_dataframe(f, ext='csv', **kwargs):
-    if ext in ('json', 'jsonl'):
+    if ext == 'jsonl':
         df = pd.read_json(f, lines=True, **kwargs)
     elif ext == 'csv':
         df = pd.read_csv(f, **kwargs)
@@ -550,7 +550,7 @@ def run_json_checks(file_path, f):
         return result
 
     try:
-        print(f'Parsing JSONl file for OMOP table "%s"' % table_name)
+        print(f'Parsing JSON Lines file for OMOP table "%s"' % table_name)
 
         format_errors = check_json_format(f, cdm_column_names)
 
@@ -669,7 +669,7 @@ def run_json_checks(file_path, f):
 def process_file(file_path: Path) -> dict:
     """This function processes the submitted file
 
-    :param Path file_path: A path to a .csv, .json, or .jsonl file
+    :param Path file_path: A path to a .csv or .jsonl file
     :return dict: A dictionary of errors found in the file. If there are no errors,
     then only the error report headers will in the results.
     """
@@ -677,10 +677,15 @@ def process_file(file_path: Path) -> dict:
     run_checks = None
     if file_path.suffix == '.csv':
         run_checks = run_csv_checks
-    elif file_path.suffix in ('.json', '.jsonl'):
+    elif file_path.suffix == '.jsonl':
         run_checks = run_json_checks
+    elif file_path.suffix == '.json':
+        raise (ValueError(
+            f"JSON Lines file {file_path.name} should have not have extension '.json'. Please rename to '.jsonl'."
+        ))
     else:
-        raise (ValueError('File is not a csv or json file.'))
+        raise (
+            ValueError(f'File {file_path.name} is not a csv or jsonl file.'))
 
     enc = detect_bom_encoding(file_path)
     if enc is None:
