@@ -243,6 +243,7 @@ def find_scientific_notation_errors(f, int_columns, ext='csv'):
 
 
 def has_scientific_notation_error(row, int_columns):
+    # TODO: Add docstrings
     row = row[[col for col in int_columns if col in row.columns]]
     sci_not_line = collections.defaultdict(int)
 
@@ -317,17 +318,17 @@ def check_json_format(f, column_names):
 
     try:
         json_list = list(f)
-
+        # TODO: Find errors with leading or trailing brackets [ ]
         for idx, json_str in enumerate(json_list, start=1):
             json_obj = json.loads(json_str)
             if len(json_obj.values()) != len(column_names):
                 column_mismatch_msg = 'Incorrect number of columns on line %s: %s' % (
-                    str(idx), json_str)
+                    str(idx), str(json_obj))
                 results.append([column_mismatch_msg, None, None])
                 break
-    except (json.JSONDecodeError, ValueError):
-        error_msg = f"The following exception was raised on line {idx}:\n\n{traceback.format_exc()}"
-
+    except (json.JSONDecodeError, ValueError) as e:
+        error_msg = f"The following exception was raised on line {idx}: {e}"
+        error_msg = error_msg.replace("line 1", f"line {idx}")
         results.append([error_msg, None, None])
 
         # print(
