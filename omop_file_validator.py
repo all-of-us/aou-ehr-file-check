@@ -57,6 +57,12 @@ def get_readable_key(key):
 
 
 def read_file_as_dataframe(f, ext='csv', **kwargs):
+    """Reads a CSV or JSONL file as a dataframe 
+
+    :param file-like f: CSV or JSON file to read
+    :param str ext: The file extension, defaults to 'csv'
+    :return pandas.DataFrame: Dataframe containing the loaded file contents
+    """
     if ext == 'jsonl':
         df = pd.read_json(f, lines=True, **kwargs)
     elif ext == 'csv':
@@ -68,6 +74,11 @@ def read_file_as_dataframe(f, ext='csv', **kwargs):
 
 
 def get_cdm_table_columns(table_name):
+    """Retrieve CDM table column names from configuration
+
+    :param str table_name: Name of the CDM table
+    :return dict: Deserialized dictionary of the table columns
+    """
     # allow files to be found regardless of CaSe
     file = os.path.join(settings.cdm_metadata_path,
                         table_name.lower() + '.json')
@@ -147,6 +158,11 @@ def date_format_valid(date_str, fmt='%Y-%m-%d'):
 
 
 def detect_bom_encoding(file_path):
+    """Detect encoding of a file
+
+    :param str file_path: Path to a file
+    :return : If encoding found, return string. Otherwise, return None
+    """
     default = None
     with open(file_path, 'rb') as f:
         buffer = f.read(4)
@@ -168,6 +184,15 @@ def detect_bom_encoding(file_path):
 # currently, it does NOT find all errors in the column.
 def find_error_in_file(column_name, cdm_column_type, submission_column_type,
                        df):
+    """Finds first occurrence of an error within a column
+
+    :param str column_name: Name of the column
+    :param str cdm_column_type: Expected column type
+    :param str submission_column_type: Actual column type
+    :param pandas.DataFrame df: Dataframe containing submission
+    :return int/bool: If value error found, return row index of error. Otherwise,
+                        return False
+    """
     for i, (index, row) in enumerate(df.iterrows()):
 
         try:
@@ -182,6 +207,13 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type,
 
 
 def find_error_in_row(row, column_name, cdm_column_type):
+    """Finds occurrence of an error within a row
+
+    :param pandas.DataFrame row: A DataFrame with only a single row entry
+    :param str column_name: Column name to search for error
+    :param str cdm_column_type: Expected column type
+    :return bool: True, if an error is found. Otherwise, False
+    """
     try:
         if pd.notnull(row[column_name].iloc[0]):
             cast_type(cdm_column_type, row[column_name].iloc[0])
@@ -211,12 +243,24 @@ def find_blank_lines(f, ext='csv'):
 
 
 def is_line_blank(row):
+    """Check if submitted row has only empty data values
+
+    :param pandas.DataFrame row: A DataFrame with only a single row entry
+    :return bool: True, if all columns in DataFrame are empty. Otherwise, False
+    """
     is_blank = all(row.apply(lambda col: pd.isnull(col)))
 
     return is_blank
 
 
 def find_scientific_notation_errors(f, int_columns, ext='csv'):
+    """Find integer fields that are provided with scientific notation
+
+    :param str f: Path to file
+    :param list int_columns: List of column names of expected integer fields
+    :param str ext: File extension, defaults to 'csv'
+    :return dict{str: int}: Dictionary of column names, with their errneous values and lines
+    """
     df = read_file_as_dataframe(f, dtype=str, ext=ext)
     df = df.rename(columns=str.lower)
     df = df[[col for col in int_columns if col in df.columns]]
@@ -236,7 +280,14 @@ def find_scientific_notation_errors(f, int_columns, ext='csv'):
 
 
 def has_scientific_notation_error(row, int_columns):
-    # TODO: Add docstrings
+    """Find integer fields that are provided with scientific notation
+    in an individual row
+
+    :param pandas.DataFrame row: A DataFrame with only a single row entry
+    :param list int_columns: List of column names of expected integer fields
+    :return dict{str: str}: Dictionary of column names and erroneous values
+    """
+
     row = row[[col for col in int_columns if col in row.columns]]
     sci_not_line = collections.defaultdict(int)
 
@@ -251,6 +302,7 @@ def has_scientific_notation_error(row, int_columns):
 
 
 def check_csv_format(f, column_names):
+
     results = []
     idx = 1
     line = []
@@ -306,6 +358,12 @@ def check_csv_format(f, column_names):
 
 
 def check_json_format(f, column_names):
+    """Run several formatting checks on a JSONL file submission
+
+    :param str f: Filepath to a JSONL file
+    :param list column_names: Expected list of column names
+    :return list: List of found errors
+    """
     results = []
     idx = 1
 
@@ -328,6 +386,12 @@ def check_json_format(f, column_names):
 
 
 def run_csv_checks(file_path, f):
+    """Run several conformance/definition checks on a CSV file submission
+
+    :param pathlib.Path file_path: Path to file
+    :param file f: File object
+    :return list: List of found errors
+    """
     table_name = file_path.stem
     ext = file_path.suffix
     print(f'Found {ext} file {file_path}')
@@ -502,6 +566,12 @@ def run_csv_checks(file_path, f):
 
 
 def run_json_checks(file_path, f):
+    """Run several conformance/definition checks on a JSONL file submission
+
+    :param pathlib.Path file_path: Path to file
+    :param file f: File object
+    :return list: List of found errors
+    """
     table_name = file_path.stem
     print(f'Found {file_path.suffix} file {file_path}')
 
@@ -728,6 +798,13 @@ def generate_pretty_html(html_output_file_name):
 
 
 def get_files(base_path, extensions):
+    """Get list of files in base_path with certain extensions
+
+    :param str base_path: Directory path containing files
+    :param list[str] extensions: List of acceptable extensions
+    :return list[str]: List of files found in directory with
+    eligible extensions
+    """
     files = []
     for ext in extensions:
         files.extend(Path(base_path).glob(f"*.{ext}"))
@@ -736,6 +813,11 @@ def get_files(base_path, extensions):
 
 
 def evaluate_submission(d):
+    """Entry point for evaluating all files in a submission
+
+    :param str d: Path to the submission directory
+    :return dict: Dictionary of found errors
+    """
     out_dir = os.path.join(d, 'errors')
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
