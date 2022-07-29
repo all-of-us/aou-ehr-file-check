@@ -158,8 +158,8 @@ def detect_bom_encoding(file_path):
     for enc, boms in non_standard_encodings:
         if any(buffer.startswith(bom) for bom in boms):
             print(
-                'Detected non-standard encoding %s. Please encode the CSV file in utf-8 standard'
-                % enc)
+                f'Detected non-standard encoding {enc}. Please encode the CSV file in utf-8 standard'
+            )
             return enc
     return default
 
@@ -231,13 +231,6 @@ def find_scientific_notation_errors(f, int_columns, ext='csv'):
                                               value):
                 sci_not_line[submission_col_name] = (value, i + 1)
                 break
-
-    # for col, (value, line_num) in sci_not_line.items():
-    #     e = dict(message=(
-    #         f"Scientific notation value '{value}' was found on line {line_num}. "
-    #         "Scientific notation is not allowed for integer fields."),
-    #              column_name=col)
-    #     errors.append(e)
 
     return sci_not_line
 
@@ -330,21 +323,6 @@ def check_json_format(f, column_names):
         error_msg = f"The following exception was raised on line {idx}: {e}"
         error_msg = error_msg.replace("line 1", f"line {idx}")
         results.append([error_msg, None, None])
-
-        # print(
-        #     'Enclose all fields in double-quotes\n'
-        #     'e.g. person_id,2020-05-05,6345 -> "person_id","2020-05-05","6345"\n'
-        #     'At a minimum, enclose all non-numeric fields in double-quotes \n'
-        #     'e.g. person_id,2020-05-05,6345 -> "person_id","2020-05-05",6345\n'
-        # )
-        # print(
-        #     'Pair stray double quotes or remove them if they are inside a field \n'
-        #     'e.g. "wound is 1" long" -> "wound is 1"" long" or "wound is 1 long"\n'
-        # )
-        # print(
-        #     'Remove stray commas if they are inside a field and next to a double quote \n'
-        #     'e.g. "drug route: "orally", "topically"" -> "drug route: ""orally"" ""topically"""\n'
-        # )
     f.seek(0)
     return results
 
@@ -352,7 +330,7 @@ def check_json_format(f, column_names):
 def run_csv_checks(file_path, f):
     table_name = file_path.stem
     ext = file_path.suffix
-    print(f'Found {ext} file %s' % file_path)
+    print(f'Found {ext} file {file_path}')
 
     result = {
         'passed': False,
@@ -365,7 +343,7 @@ def run_csv_checks(file_path, f):
     cdm_table_columns = get_cdm_table_columns(table_name)
 
     if cdm_table_columns is None:
-        msg = '"%s" is not a valid OMOP table' % table_name
+        msg = f'"{table_name}" is not a valid OMOP table'
         print(msg)
         result['errors'].append(dict(message=msg))
         return result
@@ -374,11 +352,11 @@ def run_csv_checks(file_path, f):
     cdm_column_names = [col['name'] for col in cdm_table_columns]
 
     if not file_path.exists():
-        print('File does not exist: %s' % file_path)
+        print(f'File does not exist: {file_path}')
         return result
 
     try:
-        print('Parsing CSV file for OMOP table "%s"' % table_name)
+        print(f'Parsing CSV file for OMOP table "{table_name}"')
 
         format_errors = check_csv_format(f, cdm_column_names)
         for format_error in format_errors:
@@ -469,7 +447,7 @@ def run_csv_checks(file_path, f):
 
                         # Check that date format is in the YYYY-MM-DD or YYYY-MM-DD hh:mm:ss format
                         if meta_column_type in ('date', 'timestamp'):
-                            fmt = ''
+                            fmts = ''
                             err_msg = ''
 
                             if meta_column_type == 'date':
@@ -525,7 +503,7 @@ def run_csv_checks(file_path, f):
 
 def run_json_checks(file_path, f):
     table_name = file_path.stem
-    print(f'Found {file_path.suffix} file %s' % file_path)
+    print(f'Found {file_path.suffix} file {file_path}')
 
     result = {
         'passed': False,
@@ -538,7 +516,7 @@ def run_json_checks(file_path, f):
     cdm_table_columns = get_cdm_table_columns(table_name)
 
     if cdm_table_columns is None:
-        msg = '"%s" is not a valid OMOP table' % table_name
+        msg = f'"{table_name}" is not a valid OMOP table'
         print(msg)
         result['errors'].append(dict(message=msg))
         return result
@@ -547,11 +525,11 @@ def run_json_checks(file_path, f):
     cdm_column_names = [col['name'] for col in cdm_table_columns]
 
     if not file_path.exists():
-        print('File does not exist: %s' % file_path)
+        print(f'File does not exist: {file_path}')
         return result
 
     try:
-        print(f'Parsing JSON Lines file for OMOP table "%s"' % table_name)
+        print(f'Parsing JSON Lines file for OMOP table "{table_name}"')
 
         format_errors = check_json_format(f, cdm_column_names)
 
@@ -602,7 +580,7 @@ def run_json_checks(file_path, f):
 
             for meta_item in cdm_table_columns:
                 meta_column_name = meta_item['name']
-                meta_column_required = meta_item['mode'] == 'required'
+                meta_column_required = meta_item['mode'].lower() == 'required'
                 meta_column_type = meta_item['type']
 
                 if meta_column_name not in row.columns and meta_column_required:
@@ -662,8 +640,8 @@ def run_json_checks(file_path, f):
         # row_error_found = True
     else:
         print(
-            'CSV file for "%s" parsed successfully. Please check for errors in the results files.'
-            % table_name)
+            f'JSONL file for "{table_name}" parsed successfully. Please check for errors in the results files.'
+        )
     return result
 
 
@@ -695,7 +673,7 @@ def process_file(file_path: Path) -> dict:
     else:
         with open(file_path, 'r', encoding=enc) as f:
             result = run_checks(file_path, f)
-    print('Finished processing %s\n' % file_path)
+    print(f'Finished processing {file_path}\n')
     return result
 
 
