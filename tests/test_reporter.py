@@ -140,6 +140,19 @@ class TestReporter(unittest.TestCase):
         self.check_required_value(error_map[f_name],
                                   column_name='visit_occurrence_id')
 
+    def test_load_json(self):
+        submission_folder = settings.example_path
+        error_map = omop_file_validator.evaluate_submission(submission_folder)
+
+        f_name = "note.jsonl"
+        self.assertIn(f_name, error_map)
+
+        self.check_incorrect_column(error_map[f_name],
+                                    actual='favorite_note_id')
+
+        self.check_missing_column(error_map[f_name],
+                                  expected='note_type_concept_id')
+
 
 if __name__ == '__main__':
     unittest.main()
