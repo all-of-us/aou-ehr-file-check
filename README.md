@@ -4,7 +4,7 @@ Validate submissions for the All of Us EHR data
 
 ## Requirements
 
- * Python 2.7.* or Python 3 (download from [here](https://www.python.org/downloads/) and install)
+ * Python >=3.6 (download from [here](https://www.python.org/downloads/) and install)
  * pip (download [get-pip.py](https://bootstrap.pypa.io/get-pip.py) and run `python get-pip.py`)
 
 ## Installation / Configuration
