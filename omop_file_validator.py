@@ -421,7 +421,8 @@ def run_csv_checks(file_path, f):
         'passed': False,
         'errors': [],
         'file_name': file_path.name,
-        'table_name': get_readable_key(table_name)
+        'table_name': get_readable_key(table_name),
+        'data_types': {}
     }
 
     # get the column definitions for a particular OMOP table
@@ -573,12 +574,16 @@ def run_csv_checks(file_path, f):
                             dict(message=MSG_NULL_DISALLOWED,
                                  column_name=submission_column))
                     continue
-
+            #result['data_types'] = df.dtypes.to_dict()
+            #print('TEST: ', result['data_types'])
             # Check if the column is required
             if not submission_has_column and meta_column_required:
                 result['errors'].append(
                     dict(message='Missing required column',
                          column_name=meta_column_name))
+        
+        types = df.dtypes.to_dict()
+        result['data_types'].update(types)
     except Exception as e:
         print(traceback.format_exc())
         # Adding error message if there is a wrong number of columns in a row
@@ -587,6 +592,9 @@ def run_csv_checks(file_path, f):
         print(
             'CSV file for "%s" parsed successfully. Please check for errors in the results files.'
             % table_name)
+
+    
+
     return result
 
 
