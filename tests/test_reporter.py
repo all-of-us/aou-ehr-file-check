@@ -1,4 +1,3 @@
-from importlib.resources import path
 import settings
 import unittest
 import pathlib
