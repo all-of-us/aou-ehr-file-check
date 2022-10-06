@@ -581,7 +581,7 @@ def run_csv_checks(file_path, f):
                 result['errors'].append(
                     dict(message='Missing required column',
                          column_name=meta_column_name))
-        
+
         types = df.dtypes.to_dict()
         result['data_types'].update(types)
     except Exception as e:
@@ -592,8 +592,6 @@ def run_csv_checks(file_path, f):
         print(
             'CSV file for "%s" parsed successfully. Please check for errors in the results files.'
             % table_name)
-
-    
 
     return result
 

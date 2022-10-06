@@ -157,7 +157,8 @@ class TestReporter(unittest.TestCase):
                                   expected='note_type_concept_id')
 
     def test_str_columns(self):
-        file_path = Path("tests/resources/examples_erroneous/procedure_occurrence.csv")
+        file_path = Path(
+            "tests/resources/examples_erroneous/procedure_occurrence.csv")
         f = open(file_path, 'r')
         # get original data types
         original_df = pd.read_csv(f)
@@ -168,6 +169,7 @@ class TestReporter(unittest.TestCase):
         result = omop_file_validator.run_csv_checks(file_path, f)
         enforced_dtypes = result['data_types']
         self.assertDictEqual(original_dtypes, enforced_dtypes)
-        
+
+
 if __name__ == '__main__':
     unittest.main()
