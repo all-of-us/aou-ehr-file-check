@@ -56,13 +56,23 @@ def get_readable_key(key):
     return new_key
 
 
-def read_file_as_dataframe(f, ext='csv', **kwargs):
+def read_file_as_dataframe(f, ext='csv', str_as_object=True, **kwargs):
     """Reads a CSV or JSONL file as a dataframe 
 
     :param file-like f: CSV or JSON file to read
     :param str ext: The file extension, defaults to 'csv'
+    :param bool str_as_object: Flag to set all string fields as type object, defaults
+                                to True
     :return pandas.DataFrame: Dataframe containing the loaded file contents
     """
+
+    if str_as_object and 'dtype' not in kwargs:
+        table_name = Path(f).stem
+        str_table_columns = get_cdm_table_str_columns(table_name)
+        dtype = {col: object for col in get_cdm_table_str_columns(table_name)}
+
+        kwargs['dtype'] = dtype
+
     if ext == 'jsonl':
         df = pd.read_json(f, lines=True, **kwargs)
     elif ext == 'csv':
@@ -87,6 +97,17 @@ def get_cdm_table_columns(table_name):
             return json.load(f, object_pairs_hook=collections.OrderedDict)
     else:
         return None
+
+
+def get_cdm_table_str_columns(table_name):
+    cdm_table_columns = get_cdm_table_columns(table_name)
+    cdm_table_str_columns = []
+    if cdm_table_columns:
+        for col in cdm_table_columns:
+            if col["type"] == "string":
+                cdm_table_str_columns.append(col["name"])
+
+    return cdm_table_str_columns
 
 
 def type_eq(cdm_column_type, submission_column_type):
@@ -400,7 +421,8 @@ def run_csv_checks(file_path, f):
         'passed': False,
         'errors': [],
         'file_name': file_path.name,
-        'table_name': get_readable_key(table_name)
+        'table_name': get_readable_key(table_name),
+        'data_types': {}
     }
 
     # get the column definitions for a particular OMOP table
@@ -436,7 +458,7 @@ def run_csv_checks(file_path, f):
         ]
         f.seek(0)
 
-        blank_lines = find_blank_lines(f, ext=ext)
+        blank_lines = find_blank_lines(file_path, ext=ext)
         if blank_lines:
             blank_lines_str = ",".join(map(str, blank_lines))
             line_str = 'lines' if len(blank_lines) > 1 else 'line'
@@ -474,7 +496,11 @@ def run_csv_checks(file_path, f):
                          sep=',',
                          na_values=['', ' ', '.'],
                          parse_dates=False,
-                         infer_datetime_format=False)
+                         infer_datetime_format=False,
+                         dtype={
+                             col: object
+                             for col in get_cdm_table_str_columns(table_name)
+                         })
 
         # Check each column exists with correct type and required
         for meta_item in cdm_table_columns:
@@ -548,12 +574,16 @@ def run_csv_checks(file_path, f):
                             dict(message=MSG_NULL_DISALLOWED,
                                  column_name=submission_column))
                     continue
-
+            #result['data_types'] = df.dtypes.to_dict()
+            #print('TEST: ', result['data_types'])
             # Check if the column is required
             if not submission_has_column and meta_column_required:
                 result['errors'].append(
                     dict(message='Missing required column',
                          column_name=meta_column_name))
+
+        types = df.dtypes.to_dict()
+        result['data_types'].update(types)
     except Exception as e:
         print(traceback.format_exc())
         # Adding error message if there is a wrong number of columns in a row
@@ -562,6 +592,7 @@ def run_csv_checks(file_path, f):
         print(
             'CSV file for "%s" parsed successfully. Please check for errors in the results files.'
             % table_name)
+
     return result
 
 

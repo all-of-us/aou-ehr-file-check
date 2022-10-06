@@ -1,6 +1,7 @@
 import settings
 import unittest
 import omop_file_validator
+import pandas as pd
 from pathlib import Path
 
 
@@ -152,6 +153,20 @@ class TestReporter(unittest.TestCase):
 
         self.check_missing_column(error_map[f_name],
                                   expected='note_type_concept_id')
+
+    def test_str_columns(self):
+        file_path = Path(
+            "tests/resources/examples_erroneous/procedure_occurrence.csv")
+        f = open(file_path, 'r')
+        # get original data types
+        original_df = pd.read_csv(f)
+        original_dtypes = original_df.dtypes.to_dict()
+        # reset file object to beginning of file
+        f.seek(0)
+        # run csv checks and get resulting datatypes
+        result = omop_file_validator.run_csv_checks(file_path, f)
+        enforced_dtypes = result['data_types']
+        self.assertDictEqual(original_dtypes, enforced_dtypes)
 
 
 if __name__ == '__main__':
