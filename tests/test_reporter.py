@@ -1,6 +1,5 @@
 import settings
 import unittest
-import pathlib
 import omop_file_validator
 import pandas as pd
 from pathlib import Path
