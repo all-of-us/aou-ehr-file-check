@@ -56,6 +56,7 @@ def get_readable_key(key):
     return new_key
 
 
+
 def read_file_as_dataframe(f, ext='csv', str_as_object=True, **kwargs):
     """Reads a CSV or JSONL file as a dataframe 
 
@@ -501,7 +502,6 @@ def run_csv_checks(file_path, f):
                              col: object
                              for col in get_cdm_table_str_columns(table_name)
                          })
-
         # Check each column exists with correct type and required
         for meta_item in cdm_table_columns:
             meta_column_name = meta_item['name']
