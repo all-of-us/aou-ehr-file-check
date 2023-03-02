@@ -29,14 +29,18 @@ class TestReporter(unittest.TestCase):
         self.check_error(
             errors, message=f'"{Path(f_name).stem}" is not a valid OMOP table')
 
-    def check_incorrect_column(self, errors, actual=None):
-        self.check_error(errors,
-                         message=omop_file_validator.MSG_INCORRECT_HEADER,
-                         actual=actual)
+    def check_incorrect_column(self, errors, line_number=None, actual=None):
+        message = omop_file_validator.MSG_INCORRECT_HEADER if line_number is None else f'{omop_file_validator.MSG_INCORRECT_HEADER}: line number {line_number}'
+        self.check_error(errors, message=message, actual=actual)
 
-    def check_missing_column(self, errors, column_name=None, expected=None):
+    def check_missing_column(self,
+                             errors,
+                             line_number=None,
+                             column_name=None,
+                             expected=None):
+        message = omop_file_validator.MSG_MISSING_HEADER if line_number is None else f'{omop_file_validator.MSG_MISSING_HEADER}: line number {line_number}'
         self.check_error(errors,
-                         message=omop_file_validator.MSG_MISSING_HEADER,
+                         message=message,
                          column_name=column_name,
                          expected=expected)
 
@@ -77,9 +81,14 @@ class TestReporter(unittest.TestCase):
             f'Invalid timestamp format. Expecting "YYYY-MM-DD HH:MM:SS[.SSSSSS]": line number {linenumber}',
             column_name=column_name)
 
-    def check_required_value(self, errors, actual=None, column_name=None):
+    def check_required_value(self,
+                             errors,
+                             line_number=None,
+                             actual=None,
+                             column_name=None):
+        message = omop_file_validator.MSG_NULL_DISALLOWED if line_number is None else f'{omop_file_validator.MSG_NULL_DISALLOWED}: line number {line_number}'
         self.check_error(errors,
-                         message=omop_file_validator.MSG_NULL_DISALLOWED,
+                         message=message,
                          actual=actual,
                          column_name=column_name)
 
@@ -98,7 +107,7 @@ class TestReporter(unittest.TestCase):
         # [resources/omop/dose_era.json](https://github.com/all-of-us/aou-ehr-file-check/tree/master/resources/omop/dose_era.json)
         f_name = "drug_exposure.csv"
         self.assertIn(f_name, error_map)
-        self.check_incorrect_column(error_map[f_name], 'drug_id')
+        self.check_incorrect_column(error_map[f_name], actual='drug_id')
 
         # "drug_exposure.csv" has the column "person_id" missing
         self.check_missing_column(error_map[f_name], column_name='person_id')
@@ -149,9 +158,11 @@ class TestReporter(unittest.TestCase):
         self.assertIn(f_name, error_map)
 
         self.check_incorrect_column(error_map[f_name],
+                                    line_number=4,
                                     actual='favorite_note_id')
 
         self.check_missing_column(error_map[f_name],
+                                  line_number=4,
                                   expected='note_type_concept_id')
 
     def test_str_columns(self):
