@@ -60,8 +60,7 @@ def get_readable_key(key):
 def read_file_as_dataframe(f,
                            ext='csv',
                            str_as_object=True,
-                           restrict=False,
-                           n_rows=1000,
+                           restrict=None,
                            **kwargs):
     """Reads a CSV or JSONL file as a dataframe 
 
@@ -80,20 +79,11 @@ def read_file_as_dataframe(f,
         kwargs['dtype'] = dtype
 
     if ext == 'jsonl':
-        df = pd.read_json(f,
-                          lines=True,
-                          nrows=n_rows if restrict else None,
-                          **kwargs)
+        df = pd.read_json(f, lines=True, nrows=restrict, **kwargs)
     elif ext == 'csv':
-        if restrict:
-            df = pd.read_csv(f, nrows=n_rows, **kwargs)
-        else:
-            df = pd.read_csv(f, **kwargs)
+        df = pd.read_csv(f, nrows=restrict, **kwargs)
     else:
-        if restrict:
-            df = pd.read_csv(f, nrows=n_rows, **kwargs)
-        else:
-            df = pd.read_csv(f, **kwargs)
+        df = pd.read_csv(f, nrows=restrict, **kwargs)
 
     return df
 
@@ -259,7 +249,7 @@ def find_error_in_row(row, column_name, cdm_column_type):
         return True
 
 
-def find_blank_lines(f, ext='csv', restrict=False, n_rows=1000):
+def find_blank_lines(f, ext='csv', restrict=None):
     """Check for rows in a csv file with only empty values
 
     :param f: A file object
@@ -267,7 +257,7 @@ def find_blank_lines(f, ext='csv', restrict=False, n_rows=1000):
     :return: List of rows with all empty values
     :rtype: list
     """
-    df = read_file_as_dataframe(f, ext=ext, restrict=restrict, n_rows=n_rows)
+    df = read_file_as_dataframe(f, ext=ext, restrict=restrict)
     indices = []
     empty_criteria = df.apply(
         lambda row: all(row.apply(lambda col: pd.isnull(col))),
@@ -289,11 +279,7 @@ def is_line_blank(row):
     return is_blank
 
 
-def find_scientific_notation_errors(f,
-                                    int_columns,
-                                    ext='csv',
-                                    restrict=False,
-                                    n_rows=1000):
+def find_scientific_notation_errors(f, int_columns, ext='csv', restrict=None):
     """Find integer fields that are provided with scientific notation
 
     :param str f: Path to file
@@ -301,11 +287,7 @@ def find_scientific_notation_errors(f,
     :param str ext: File extension, defaults to 'csv'
     :return dict{str: int}: Dictionary of column names, with their errneous values and lines
     """
-    df = read_file_as_dataframe(f,
-                                dtype=str,
-                                ext=ext,
-                                restrict=restrict,
-                                n_rows=n_rows)
+    df = read_file_as_dataframe(f, dtype=str, ext=ext, restrict=restrict)
     df = df.rename(columns=str.lower)
     df = df[[col for col in int_columns if col in df.columns]]
 
@@ -345,7 +327,7 @@ def has_scientific_notation_error(row, int_columns):
     return sci_not_line
 
 
-def check_csv_format(f, column_names, restrict=False, n_rows=1000):
+def check_csv_format(f, column_names, restrict=None):
 
     results = []
     idx = 1
@@ -360,7 +342,7 @@ def check_csv_format(f, column_names, restrict=False, n_rows=1000):
             results.append([header_error_msg, header, column_names])
 
         for idx, line in enumerate(reader, start=2):
-            if restrict and idx - 1 > n_rows:
+            if restrict and idx - 1 > restrict:
                 break
 
             for field in line:
@@ -436,7 +418,7 @@ def check_json_format(f, column_names, restrict=False, n_rows=1000):
     return results
 
 
-def run_csv_checks(file_path, f, restrict=False, n_rows=1000):
+def run_csv_checks(file_path, f, restrict=None):
     """Run several conformance/definition checks on a CSV file submission
 
     :param pathlib.Path file_path: Path to file
@@ -476,8 +458,7 @@ def run_csv_checks(file_path, f, restrict=False, n_rows=1000):
 
         format_errors = check_csv_format(f,
                                          cdm_column_names,
-                                         restrict=restrict,
-                                         n_rows=n_rows)
+                                         restrict=restrict)
         for format_error in format_errors:
             result['errors'].append(
                 dict(message=format_error[0],
@@ -491,10 +472,7 @@ def run_csv_checks(file_path, f, restrict=False, n_rows=1000):
         ]
         f.seek(0)
 
-        blank_lines = find_blank_lines(file_path,
-                                       ext=ext,
-                                       restrict=restrict,
-                                       n_rows=n_rows)
+        blank_lines = find_blank_lines(file_path, ext=ext, restrict=restrict)
         if blank_lines:
             blank_lines_str = ",".join(map(str, blank_lines))
             line_str = 'lines' if len(blank_lines) > 1 else 'line'
@@ -517,8 +495,7 @@ def run_csv_checks(file_path, f, restrict=False, n_rows=1000):
         sci_not_errors = find_scientific_notation_errors(f,
                                                          int_columns,
                                                          ext=ext,
-                                                         restrict=restrict,
-                                                         n_rows=n_rows)
+                                                         restrict=restrict)
 
         for col, (value, line_num) in sci_not_errors.items():
             e = dict(message=(
@@ -536,7 +513,7 @@ def run_csv_checks(file_path, f, restrict=False, n_rows=1000):
                          na_values=['', ' ', '.'],
                          parse_dates=False,
                          infer_datetime_format=False,
-                         nrows=n_rows if restrict else None,
+                         nrows=restrict,
                          dtype={
                              col: object
                              for col in get_cdm_table_str_columns(table_name)
@@ -635,7 +612,7 @@ def run_csv_checks(file_path, f, restrict=False, n_rows=1000):
     return result
 
 
-def run_json_checks(file_path, f, restrict=False, n_rows=1000):
+def run_json_checks(file_path, f, restrict=None):
     """Run several conformance/definition checks on a JSONL file submission
 
     :param pathlib.Path file_path: Path to file
@@ -673,8 +650,7 @@ def run_json_checks(file_path, f, restrict=False, n_rows=1000):
 
         format_errors = check_json_format(f,
                                           cdm_column_names,
-                                          restrict=restrict,
-                                          n_rows=n_rows)
+                                          restrict=restrict)
 
         for format_error in format_errors:
             result['errors'].append(
@@ -690,7 +666,7 @@ def run_json_checks(file_path, f, restrict=False, n_rows=1000):
             if row_error_found:
                 break
 
-            if restrict and idx > n_rows:
+            if restrict and idx > restrict:
                 break
 
             row = pd.read_json(json_str,
@@ -791,7 +767,7 @@ def run_json_checks(file_path, f, restrict=False, n_rows=1000):
     return result
 
 
-def process_file(file_path: Path, restrict=False, n_rows=1000) -> dict:
+def process_file(file_path: Path, restrict=None) -> dict:
     """This function processes the submitted file
 
     :param Path file_path: A path to a .csv or .jsonl file
@@ -815,10 +791,10 @@ def process_file(file_path: Path, restrict=False, n_rows=1000) -> dict:
     enc = detect_bom_encoding(file_path)
     if enc is None:
         with open(file_path, 'r') as f:
-            result = run_checks(file_path, f, restrict=restrict, n_rows=n_rows)
+            result = run_checks(file_path, f, restrict=restrict)
     else:
         with open(file_path, 'r', encoding=enc) as f:
-            result = run_checks(file_path, f, restrict=restrict, n_rows=n_rows)
+            result = run_checks(file_path, f, restrict=restrict)
     print(f'Finished processing {file_path}\n')
     return result
 
@@ -891,7 +867,7 @@ def get_files(base_path, extensions):
     return files
 
 
-def evaluate_submission(d, restrict=False, n_rows=1000):
+def evaluate_submission(d, restrict=None):
     """Entry point for evaluating all files in a submission
 
     :param str d: Path to the submission directory
@@ -918,7 +894,7 @@ def evaluate_submission(d, restrict=False, n_rows=1000):
     for f in get_files(d, file_types):
         file_name = f.name
 
-        result = process_file(f, restrict=restrict, n_rows=n_rows)
+        result = process_file(f, restrict=restrict)
         rows = []
         for error in result['errors']:
             row = []
@@ -950,18 +926,14 @@ if __name__ == '__main__':
         description=
         "Evaluate OMOP files for formatting issues before AoU submission.")
 
-    parser.add_argument('-r',
-                        '--restrict',
-                        action='store_true',
-                        help="Flag to restrict rows by argument {--n}")
-    parser.add_argument('-n',
-                        '--n_rows',
-                        type=int,
-                        default=1000,
-                        help="Number of rows to validate per file.")
-
+    parser.add_argument(
+        '-r',
+        '--restrict',
+        action='store',
+        required=False,
+        help=
+        "Number of rows to restrict for validation per file. e.g. --restrict 1000 for only validating the first 1000 lines"
+    )
     args = parser.parse_args()
 
-    evaluate_submission(settings.csv_dir,
-                        restrict=args.restrict,
-                        n_rows=args.n_rows)
+    evaluate_submission(settings.csv_dir, restrict=args.restrict)
