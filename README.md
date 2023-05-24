@@ -19,9 +19,18 @@ Validate submissions for the All of Us EHR data
  * Set the "csv_dir" parameter in `settings.py` to the full path of the folder created above
  * Ensure the resources folder is also downloaded and is located in the same place as `omop_file_validator.py`
  * Execute the following at the command line:
- 
-        python omop_file_validator.py
 
+```bash
+python omop_file_validator.py [-h] [-r RESTRICT]
+
+Evaluate OMOP files for formatting issues before AoU submission.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -r RESTRICT, --restrict RESTRICT
+                        Number of rows to restrict for validation per file. e.g. --restrict 1000 for only validating
+                        the first 1000 lines
+```
 ## Validation logic
  * File names must follow naming convention `{table}.csv`
      * `table` an OMOP CDM table listed in [resources/omop](resources/omop)
