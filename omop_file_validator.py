@@ -930,6 +930,7 @@ if __name__ == '__main__':
         '-r',
         '--restrict',
         action='store',
+        type=int,
         required=False,
         help=
         "Number of rows to restrict for validation per file. e.g. --restrict 1000 for only validating the first 1000 lines"
