@@ -12,6 +12,7 @@ import datetime
 import collections
 import re
 from pathlib import Path
+import argparse
 
 RESULT_SUCCESS = 'success'
 MSG_CANNOT_PARSE_FILENAME = 'Cannot parse filename'
@@ -56,8 +57,11 @@ def get_readable_key(key):
     return new_key
 
 
-
-def read_file_as_dataframe(f, ext='csv', str_as_object=True, **kwargs):
+def read_file_as_dataframe(f,
+                           ext='csv',
+                           str_as_object=True,
+                           restrict=None,
+                           **kwargs):
     """Reads a CSV or JSONL file as a dataframe 
 
     :param file-like f: CSV or JSON file to read
@@ -75,11 +79,11 @@ def read_file_as_dataframe(f, ext='csv', str_as_object=True, **kwargs):
         kwargs['dtype'] = dtype
 
     if ext == 'jsonl':
-        df = pd.read_json(f, lines=True, **kwargs)
+        df = pd.read_json(f, lines=True, nrows=restrict, **kwargs)
     elif ext == 'csv':
-        df = pd.read_csv(f, **kwargs)
+        df = pd.read_csv(f, nrows=restrict, **kwargs)
     else:
-        df = pd.read_csv(f, **kwargs)
+        df = pd.read_csv(f, nrows=restrict, **kwargs)
 
     return df
 
@@ -245,7 +249,7 @@ def find_error_in_row(row, column_name, cdm_column_type):
         return True
 
 
-def find_blank_lines(f, ext='csv'):
+def find_blank_lines(f, ext='csv', restrict=None):
     """Check for rows in a csv file with only empty values
 
     :param f: A file object
@@ -253,7 +257,7 @@ def find_blank_lines(f, ext='csv'):
     :return: List of rows with all empty values
     :rtype: list
     """
-    df = read_file_as_dataframe(f, ext=ext)
+    df = read_file_as_dataframe(f, ext=ext, restrict=restrict)
     indices = []
     empty_criteria = df.apply(
         lambda row: all(row.apply(lambda col: pd.isnull(col))),
@@ -275,7 +279,7 @@ def is_line_blank(row):
     return is_blank
 
 
-def find_scientific_notation_errors(f, int_columns, ext='csv'):
+def find_scientific_notation_errors(f, int_columns, ext='csv', restrict=None):
     """Find integer fields that are provided with scientific notation
 
     :param str f: Path to file
@@ -283,7 +287,7 @@ def find_scientific_notation_errors(f, int_columns, ext='csv'):
     :param str ext: File extension, defaults to 'csv'
     :return dict{str: int}: Dictionary of column names, with their errneous values and lines
     """
-    df = read_file_as_dataframe(f, dtype=str, ext=ext)
+    df = read_file_as_dataframe(f, dtype=str, ext=ext, restrict=restrict)
     df = df.rename(columns=str.lower)
     df = df[[col for col in int_columns if col in df.columns]]
 
@@ -323,7 +327,7 @@ def has_scientific_notation_error(row, int_columns):
     return sci_not_line
 
 
-def check_csv_format(f, column_names):
+def check_csv_format(f, column_names, restrict=None):
 
     results = []
     idx = 1
@@ -336,7 +340,11 @@ def check_csv_format(f, column_names):
         line = header
         if header != column_names:
             results.append([header_error_msg, header, column_names])
+
         for idx, line in enumerate(reader, start=2):
+            if restrict and idx - 1 > restrict:
+                break
+
             for field in line:
                 if '\n' in field:
                     newline_msg = 'Newline character found on line %s: %s\n' \
@@ -379,7 +387,7 @@ def check_csv_format(f, column_names):
     return results
 
 
-def check_json_format(f, column_names):
+def check_json_format(f, column_names, restrict=False, n_rows=1000):
     """Run several formatting checks on a JSONL file submission
 
     :param str f: Filepath to a JSONL file
@@ -390,9 +398,12 @@ def check_json_format(f, column_names):
     idx = 1
 
     try:
-        json_list = list(f)
+
         # TODO: Find errors with leading or trailing brackets [ ]
-        for idx, json_str in enumerate(json_list, start=1):
+        for idx, json_str in enumerate(f, start=1):
+            if restrict and idx > n_rows:
+                break
+
             json_obj = json.loads(json_str)
             if len(json_obj.values()) != len(column_names):
                 column_mismatch_msg = 'Incorrect number of columns on line %s: %s' % (
@@ -407,7 +418,7 @@ def check_json_format(f, column_names):
     return results
 
 
-def run_csv_checks(file_path, f):
+def run_csv_checks(file_path, f, restrict=None):
     """Run several conformance/definition checks on a CSV file submission
 
     :param pathlib.Path file_path: Path to file
@@ -445,7 +456,9 @@ def run_csv_checks(file_path, f):
     try:
         print(f'Parsing CSV file for OMOP table "{table_name}"')
 
-        format_errors = check_csv_format(f, cdm_column_names)
+        format_errors = check_csv_format(f,
+                                         cdm_column_names,
+                                         restrict=restrict)
         for format_error in format_errors:
             result['errors'].append(
                 dict(message=format_error[0],
@@ -459,7 +472,7 @@ def run_csv_checks(file_path, f):
         ]
         f.seek(0)
 
-        blank_lines = find_blank_lines(file_path, ext=ext)
+        blank_lines = find_blank_lines(file_path, ext=ext, restrict=restrict)
         if blank_lines:
             blank_lines_str = ",".join(map(str, blank_lines))
             line_str = 'lines' if len(blank_lines) > 1 else 'line'
@@ -481,7 +494,8 @@ def run_csv_checks(file_path, f):
         ]
         sci_not_errors = find_scientific_notation_errors(f,
                                                          int_columns,
-                                                         ext=ext)
+                                                         ext=ext,
+                                                         restrict=restrict)
 
         for col, (value, line_num) in sci_not_errors.items():
             e = dict(message=(
@@ -493,11 +507,13 @@ def run_csv_checks(file_path, f):
         f.seek(0)
 
         # read file to be processed
+
         df = pd.read_csv(f,
                          sep=',',
                          na_values=['', ' ', '.'],
                          parse_dates=False,
                          infer_datetime_format=False,
+                         nrows=restrict,
                          dtype={
                              col: object
                              for col in get_cdm_table_str_columns(table_name)
@@ -596,7 +612,7 @@ def run_csv_checks(file_path, f):
     return result
 
 
-def run_json_checks(file_path, f):
+def run_json_checks(file_path, f, restrict=None):
     """Run several conformance/definition checks on a JSONL file submission
 
     :param pathlib.Path file_path: Path to file
@@ -632,7 +648,9 @@ def run_json_checks(file_path, f):
     try:
         print(f'Parsing JSON Lines file for OMOP table "{table_name}"')
 
-        format_errors = check_json_format(f, cdm_column_names)
+        format_errors = check_json_format(f,
+                                          cdm_column_names,
+                                          restrict=restrict)
 
         for format_error in format_errors:
             result['errors'].append(
@@ -642,11 +660,13 @@ def run_json_checks(file_path, f):
 
         f.seek(0)
 
-        json_list = list(f)
         row_error_found = False
 
-        for idx, json_str in enumerate(json_list, start=1):
+        for idx, json_str in enumerate(f, start=1):
             if row_error_found:
+                break
+
+            if restrict and idx > restrict:
                 break
 
             row = pd.read_json(json_str,
@@ -661,7 +681,8 @@ def run_json_checks(file_path, f):
                 row_error_found = True
 
             # check columns if looks good process file
-            if not _check_columns(cdm_column_names, row.columns, result):
+            if not _check_columns(
+                    cdm_column_names, row.columns, result, line_number=idx):
                 row_error_found = True
 
             #search for scientific notation
@@ -685,15 +706,15 @@ def run_json_checks(file_path, f):
                 meta_column_type = meta_item['type']
 
                 if meta_column_name not in row.columns and meta_column_required:
+                    message = f'Missing required column: line number {idx}'
                     result['errors'].append(
-                        dict(message='Missing required column',
-                             column_name=meta_column_name))
+                        dict(message=message, column_name=meta_column_name))
                     row_error_found = True
                 elif pd.isnull(
                         row[meta_column_name].loc[0]) and meta_column_required:
+                    message = f'{MSG_NULL_DISALLOWED}: line number {idx}'
                     result['errors'].append(
-                        dict(message=MSG_NULL_DISALLOWED,
-                             column_name=meta_column_name))
+                        dict(message=message, column_name=meta_column_name))
                     row_error_found = True
                 else:
                     value = row[meta_column_name].loc[0]
@@ -702,7 +723,7 @@ def run_json_checks(file_path, f):
                     if find_error_in_row(row, meta_column_name,
                                          meta_column_type):
                         e = dict(message=MSG_INVALID_TYPE + " line number " +
-                                 str(idx + 1),
+                                 str(idx),
                                  column_name=meta_column_name,
                                  actual=value,
                                  expected=meta_column_type)
@@ -727,7 +748,7 @@ def run_json_checks(file_path, f):
                                         lambda fmt: date_format_valid(
                                             str(value), fmt), fmts))):
                             e = dict(message=err_msg + ": line number " +
-                                     str(idx + 1),
+                                     str(idx),
                                      column_name=meta_column_name,
                                      actual=value,
                                      expected=meta_column_type)
@@ -746,7 +767,7 @@ def run_json_checks(file_path, f):
     return result
 
 
-def process_file(file_path: Path) -> dict:
+def process_file(file_path: Path, restrict=None) -> dict:
     """This function processes the submitted file
 
     :param Path file_path: A path to a .csv or .jsonl file
@@ -770,15 +791,15 @@ def process_file(file_path: Path) -> dict:
     enc = detect_bom_encoding(file_path)
     if enc is None:
         with open(file_path, 'r') as f:
-            result = run_checks(file_path, f)
+            result = run_checks(file_path, f, restrict=restrict)
     else:
         with open(file_path, 'r', encoding=enc) as f:
-            result = run_checks(file_path, f)
+            result = run_checks(file_path, f, restrict=restrict)
     print(f'Finished processing {file_path}\n')
     return result
 
 
-def _check_columns(cdm_column_names, csv_columns, result):
+def _check_columns(cdm_column_names, csv_columns, result, line_number=None):
     """
     This function checks if the columns in the submission matches those in CDM definition
     :return: A dictionary of errors of mismatched columns
@@ -790,21 +811,24 @@ def _check_columns(cdm_column_names, csv_columns, result):
     # check all column headers in the file
     for col in csv_columns:
         if col not in cdm_column_names:
-            e = dict(message=MSG_INCORRECT_HEADER, column_name=col, actual=col)
+            msg_incorrect_header = MSG_INCORRECT_HEADER if line_number is None else f'{MSG_INCORRECT_HEADER}: line number {line_number}'
+            e = dict(message=msg_incorrect_header, column_name=col, actual=col)
             result['errors'].append(e)
             columns_valid = False
 
     # check cdm table headers against headers in file
     for col in cdm_column_names:
         if col not in csv_columns:
-            e = dict(message=MSG_MISSING_HEADER, column_name=col, expected=col)
+            msg_missing_header = MSG_MISSING_HEADER if line_number is None else f'{MSG_MISSING_HEADER}: line number {line_number}'
+            e = dict(message=msg_missing_header, column_name=col, expected=col)
             result['errors'].append(e)
             columns_valid = False
 
     # check order of cdm table headers against headers in file
     for idx, col in enumerate(cdm_column_names):
         if idx < len(csv_columns) and csv_columns[idx] != col:
-            e = dict(message=MSG_INCORRECT_ORDER,
+            msg_incorrect_order = MSG_INCORRECT_ORDER if line_number is None else f'{MSG_INCORRECT_ORDER}: line number {line_number}'
+            e = dict(message=msg_incorrect_order,
                      column_name=csv_columns[idx],
                      actual=csv_columns[idx],
                      expected=col)
@@ -843,7 +867,7 @@ def get_files(base_path, extensions):
     return files
 
 
-def evaluate_submission(d):
+def evaluate_submission(d, restrict=None):
     """Entry point for evaluating all files in a submission
 
     :param str d: Path to the submission directory
@@ -870,7 +894,7 @@ def evaluate_submission(d):
     for f in get_files(d, file_types):
         file_name = f.name
 
-        result = process_file(f)
+        result = process_file(f, restrict=restrict)
         rows = []
         for error in result['errors']:
             row = []
@@ -898,4 +922,19 @@ def evaluate_submission(d):
 
 
 if __name__ == '__main__':
-    evaluate_submission(settings.csv_dir)
+    parser = argparse.ArgumentParser(
+        description=
+        "Evaluate OMOP files for formatting issues before AoU submission.")
+
+    parser.add_argument(
+        '-r',
+        '--restrict',
+        action='store',
+        type=int,
+        required=False,
+        help=
+        "Number of rows to restrict for validation per file. e.g. --restrict 1000 for only validating the first 1000 lines"
+    )
+    args = parser.parse_args()
+
+    evaluate_submission(settings.csv_dir, restrict=args.restrict)
