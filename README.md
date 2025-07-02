@@ -26,10 +26,10 @@ python omop_file_validator.py [-h] [-r RESTRICT]
 Evaluate OMOP files for formatting issues before AoU submission.
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -r RESTRICT, --restrict RESTRICT
-                        Number of rows to restrict for validation per file. e.g. --restrict 1000 for only validating
-                        the first 1000 lines
+  -h, --help                                Show this help message and exit
+  -r RESTRICT, --restrict RESTRICT          Where RESTRICT is replaced with the number of rows to restrict f
+                                            or validation per file. e.g. --restrict 1000 for only validating
+                                            the first 1000 lines
 ```
 ## Validation logic
  * File names must follow naming convention `{table}.csv`
