@@ -13,6 +13,7 @@ import collections
 import re
 from pathlib import Path
 import argparse
+from functools import lru_cache
 
 RESULT_SUCCESS = 'success'
 MSG_CANNOT_PARSE_FILENAME = 'Cannot parse filename'
@@ -88,6 +89,7 @@ def read_file_as_dataframe(f,
     return df
 
 
+@lru_cache(maxsize=128)
 def get_cdm_table_columns(table_name):
     """Retrieve CDM table column names from configuration
 
@@ -104,6 +106,7 @@ def get_cdm_table_columns(table_name):
         return None
 
 
+@lru_cache(maxsize=128)
 def get_cdm_table_str_columns(table_name):
     cdm_table_columns = get_cdm_table_columns(table_name)
     cdm_table_str_columns = []
@@ -183,6 +186,40 @@ def date_format_valid(date_str, fmt='%Y-%m-%d'):
     return True
 
 
+def find_first_invalid_datetime(column, fmts, required):
+    """Find first invalid date/timestamp in a column.
+
+    :param pandas.Series column: Column to validate
+    :param list[str] fmts: Accepted datetime formats
+    :param bool required: Whether the column is required
+    :return tuple: (index, value) of first invalid entry or (None, None)
+    """
+    if column.empty:
+        return None, None
+
+    values = column.astype(str)
+    valid_mask = pd.Series(False, index=column.index)
+
+    for fmt in fmts:
+        remaining = values[~valid_mask]
+        if remaining.empty:
+            break
+        parsed = pd.to_datetime(remaining, format=fmt, errors='coerce')
+        valid_mask.loc[parsed.index] |= parsed.notna()
+        if valid_mask.all():
+            break
+
+    invalid_mask = ~valid_mask
+    if not required:
+        invalid_mask &= column.notna()
+
+    if invalid_mask.any():
+        first_idx = invalid_mask[invalid_mask].index[0]
+        return first_idx, column.loc[first_idx]
+
+    return None, None
+
+
 def detect_bom_encoding(file_path):
     """Detect encoding of a file
 
@@ -219,17 +256,15 @@ def find_error_in_file(column_name, cdm_column_type, submission_column_type,
     :return int/bool: If value error found, return row index of error. Otherwise,
                         return False
     """
-    for i, (index, row) in enumerate(df.iterrows()):
-
+    column = df[column_name]
+    for index, value in column.items():
         try:
-            if i <= len(df) - 1:
-                if pd.notnull(row[column_name]):
-                    cast_type(cdm_column_type, row[column_name])
-            else:
-                return False
+            if pd.notnull(value):
+                cast_type(cdm_column_type, value)
         except ValueError:
-            # print(row[column_name])
+            # print(value)
             return index
+    return False
 
 
 def find_error_in_row(row, column_name, cdm_column_type):
@@ -258,13 +293,8 @@ def find_blank_lines(f, ext='csv', restrict=None):
     :rtype: list
     """
     df = read_file_as_dataframe(f, ext=ext, restrict=restrict)
-    indices = []
-    empty_criteria = df.apply(
-        lambda row: all(row.apply(lambda col: pd.isnull(col))),
-        axis=1).astype(bool)
-
+    empty_criteria = df.isnull().all(axis=1)
     indices = df.index[empty_criteria].tolist()
-
     return [i + 1 for i in indices]
 
 
@@ -291,16 +321,16 @@ def find_scientific_notation_errors(f, int_columns, ext='csv', restrict=None):
     df = df.rename(columns=str.lower)
     df = df[[col for col in int_columns if col in df.columns]]
 
-    errors = []
     sci_not_line = collections.defaultdict(int)
 
     for submission_col_name in df.columns:
         submission_column = df[submission_col_name]
-        for i, value in submission_column.items():
-            if pd.notnull(value) and re.match(SCIENTIFIC_NOTATION_REGEX,
-                                              value):
-                sci_not_line[submission_col_name] = (value, i + 1)
-                break
+        match_mask = submission_column.str.match(SCIENTIFIC_NOTATION_REGEX,
+                                                 na=False)
+        if match_mask.any():
+            first_idx = match_mask[match_mask].index[0]
+            sci_not_line[submission_col_name] = (submission_column[first_idx],
+                                                 first_idx + 1)
 
     return sci_not_line
 
@@ -563,24 +593,17 @@ def run_csv_checks(file_path, f, restrict=None):
                                 fmts = VALID_TIMESTAMP_FORMAT
                                 err_msg = MSG_INVALID_TIMESTAMP
 
-                            for idx, value in df[submission_column].iteritems(
-                            ):
-                                if not any(
-                                        list(
-                                            map(
-                                                lambda fmt: date_format_valid(
-                                                    str(value), fmt), fmts))):
-                                    if not (pd.isnull(value)
-                                            and not meta_column_required):
-                                        e = dict(message=err_msg +
-                                                 ": line number " +
-                                                 str(idx + 1),
-                                                 column_name=submission_column,
-                                                 actual=value,
-                                                 expected=meta_column_type)
-                                        result['errors'].append(e)
-                                        #only return the first error
-                                        break
+                            error_idx, error_value = find_first_invalid_datetime(
+                                df[submission_column], fmts,
+                                meta_column_required)
+                            if error_idx is not None:
+                                e = dict(message=err_msg + ": line number " +
+                                         str(error_idx + 1),
+                                         column_name=submission_column,
+                                         actual=error_value,
+                                         expected=meta_column_type)
+                                result['errors'].append(e)
+                                #only return the first error
 
                     # Check if any nulls present in a required field
                     if meta_column_required and df[submission_column].isnull(
@@ -883,7 +906,7 @@ def evaluate_submission(d, restrict=None):
     readable_field_names = [
         get_readable_key(field_name) for field_name in HEADER_KEYS + ERROR_KEYS
     ]
-    df = pd.DataFrame(columns=readable_field_names)
+    df_list = []
     table_names = collections.defaultdict()
 
     for key in HEADER_KEYS + ERROR_KEYS:
@@ -906,9 +929,11 @@ def evaluate_submission(d, restrict=None):
 
         if len(rows) > 0:
             df_file = pd.DataFrame(rows, columns=readable_field_names)
-            df = df.append(df_file, ignore_index=True)
+            df_list.append(df_file)
 
         error_map[file_name] = result['errors']
+    df = pd.concat(df_list, ignore_index=True) if df_list else pd.DataFrame(
+        columns=readable_field_names)
     df.to_csv(output_file_name, index=False, quoting=csv.QUOTE_ALL)
 
     # changing extension
